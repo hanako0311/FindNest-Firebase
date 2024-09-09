@@ -1,9 +1,11 @@
 # FindNest-Spring : Advanced Lost and Found Management System
 
 ## Overview
+
 FindNest is an innovative digital solution designed to streamline and enhance the lost and found process at CIT-University. This system automates manual procedures, making it easier for students, faculty, and staff to report and claim lost items efficiently. With a focus on user-friendliness and security, FindNest offers a comprehensive platform that integrates the reporting, tracking, and management of lost and found items.
 
 ## Features
+
 - **Report Found Items**: Users can report found items through an intuitive form, detailing item name, description, location found, and date found.
 - **Staff Dashboard**: A dashboard for staff members to manage reported items, with capabilities to sort and filter through the lost items.
 - **Search Functionality**: Enables staff members to search for specific items based on item name, location found, and date found.
@@ -27,20 +29,26 @@ FindNest is an innovative digital solution designed to streamline and enhance th
 ## Getting Started
 
 ### Prerequisites
+
 - Node.js
 - Java (for Spring Boot)
 - Firebase Account
 
 ### Installation
+
 git clone https://github.com/yourrepository/findnest.git
 cd findnest-firebase
 npm install
 
 ### Running the Application
+
 # Start the Spring Boot backend server
+
 ./mvnw spring-boot:run
 
 # Start the React frontend with Vite
+
 cd client
 npm install
 npm run dev
+npm run
