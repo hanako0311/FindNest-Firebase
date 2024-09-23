@@ -16,6 +16,7 @@
     "chart.js": "^4.4.2",
     "client": "file:",
     "date-fns": "^3.6.0",
+    "file-saver": "^2.0.5",
     "firebase": "^10.12.2",
     "flowbite": "^2.3.0",
     "flowbite-react": "^0.8.0",
@@ -34,7 +35,8 @@
     "react-router-dom": "^6.22.3",
     "react-webcam": "^7.2.0",
     "redux-persist": "^6.0.0",
-    "tailwind-scrollbar": "^3.1.0"
+    "tailwind-scrollbar": "^3.1.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@tailwindcss/aspect-ratio": "^0.4.2",
