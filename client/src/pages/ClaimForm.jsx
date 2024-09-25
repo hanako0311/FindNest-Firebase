@@ -6,7 +6,6 @@ import { useNavigate, useParams } from "react-router-dom";
 import { HiCheck } from "react-icons/hi";
 import { useSelector } from "react-redux";
 
-
 export default function ClaimForm() {
   const { itemId } = useParams(); // Retrieve itemId from URL
   const [formData, setFormData] = useState({
@@ -31,9 +30,9 @@ export default function ClaimForm() {
     const formattedDate = formData.date.toISOString(); // Ensure the date is in ISO string format
 
     const submissionData = {
-      claimantName: formData.claimantName,
+      claimantName: formData.claimantName || currentUser.name, // Ensure claimantName is set
       date: formattedDate,
-      userRef: currentUser?.id,
+      userRef: currentUser?.id || "anonymousUser", // Use current user's ID
     };
 
     console.log("Submitting form data:", submissionData); // Log submission data
@@ -54,7 +53,8 @@ export default function ClaimForm() {
         setShowAlert(true); // Show success alert
         setTimeout(() => {
           setShowAlert(false); // Hide alert after a delay
-          navigate(`/item/${itemId}`); // Redirect back to the item details page
+          // Redirect to the DashFoundItems section
+          navigate("/dashboard?tab=found-items"); // Redirect back to DashFoundItems section
         }, 3000); // Delay for alert visibility
       } else {
         const errorData = await response.json(); // Parsing response to get error details
@@ -62,7 +62,7 @@ export default function ClaimForm() {
       }
     } catch (error) {
       console.error("Submission failed", error);
-      alert("Submission Failed!" + error.message);
+      alert("Submission Failed! " + error.message);
     }
   };
 
@@ -77,6 +77,7 @@ export default function ClaimForm() {
           name="claimantName"
           className="w-full"
           onChange={handleChange}
+          value={formData.claimantName || currentUser.name || ""}
         />
         <DatePicker
           selected={formData.date}

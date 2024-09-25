@@ -12,6 +12,8 @@ import {
 } from "react-icons/hi";
 import Papa from "papaparse";
 import fileDownload from "js-file-download";
+import FilterModal from "../reusable/FilterModal";
+import { generateReport } from "../reusable/ReportGenerator";
 
 export default function DashAnalytics() {
   const [totalItemsReported, setTotalItemsReported] = useState(0);
@@ -27,53 +29,8 @@ export default function DashAnalytics() {
   const [recentFoundItems, setRecentFoundItems] = useState([]);
   const [recentClaimedItems, setRecentClaimedItems] = useState([]);
   const [historicalItems, setHistoricalItems] = useState([]);
-
-  const fetchHistoricalItems = async () => {
-    try {
-      const res = await fetch(`/api/items/history`);
-      const fetchedHistoricalItems = await res.json();
-
-      let modifiedItems = [];
-
-      if (Array.isArray(fetchedHistoricalItems)) {
-        modifiedItems = fetchedHistoricalItems.map((item) => ({
-          ...item,
-          action: "Delete",
-          displayDate: new Date(item.createdAt).toLocaleDateString(),
-          displayTime: new Date(item.createdAt).toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
-          sortDate: new Date(item.createdAt),
-        }));
-      } else if (fetchedHistoricalItems) {
-        modifiedItems = [
-          {
-            ...fetchedHistoricalItems,
-            action: "Deleted",
-            displayDate: new Date(
-              fetchedHistoricalItems.createdAt
-            ).toLocaleDateString(),
-            displayTime: new Date(
-              fetchedHistoricalItems.createdAt
-            ).toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-            }),
-            sortDate: new Date(fetchedHistoricalItems.createdAt),
-          },
-        ];
-      } else {
-        console.error("Expected array:", fetchedHistoricalItems);
-      }
-
-      console.log("Fetched Historical Items:", fetchedHistoricalItems);
-      setHistoricalItems(modifiedItems);
-    } catch (error) {
-      console.error("Failed to fetch historical items:", error);
-    }
-  };
-
+  const [filters, setFilters] = useState([]);
+  const [showFilterModal, setShowFilterModal] = useState(false);
 
   useEffect(() => {
     console.log("Recent Found Items:", recentFoundItems);
@@ -84,10 +41,9 @@ export default function DashAnalytics() {
     try {
       const res = await fetch(`/api/items`);
       const fetchedItems = await res.json();
-          console.log("Fetched Items:", fetchedItems);
+      console.log("Fetched Items:", fetchedItems);
 
-
-      const modifiedItems = [];
+      let modifiedItems = [];
       const now = new Date();
       const foundCounts = Array(7).fill(0);
       const claimedCounts = Array(7).fill(0);
@@ -155,6 +111,48 @@ export default function DashAnalytics() {
         }
       });
 
+      // Apply filters
+      // Apply action filter
+      if (filters.action && filters.action.length > 0) {
+        modifiedItems = modifiedItems.filter((item) =>
+          filters.action.includes(item.action)
+        );
+      }
+
+      //Apply name filter
+      if (filters.name) {
+        // Split the input by commas and trim spaces
+        const queries = filters.name
+          .split(",")
+          .map((query) => query.trim().toLowerCase());
+
+        // Check if any of the queries match either the item name or the category
+        modifiedItems = modifiedItems.filter((item) =>
+          queries.some(
+            (query) =>
+              item.item.toLowerCase().includes(query) || // Matches item name
+              item.category.toLowerCase().includes(query) || // Matches category
+              item.location.toLowerCase().includes(query) || //Matches location
+              item.department.toLowerCase().includes(query)
+          )
+        );
+      }
+
+      //Apply Date Filter
+      if (filters.dateRange && filters.dateRange.length === 2) {
+        const [startDate, endDate] = filters.dateRange;
+
+        // Convert startDate and endDate to Date objects for comparison
+        const start = startDate ? new Date(startDate) : null;
+        const end = endDate ? new Date(endDate) : null;
+
+        modifiedItems = modifiedItems.filter((item) => {
+          const itemDate = new Date(item.createdAt);
+          // Check if itemDate is within the range
+          return (!start || itemDate >= start) && (!end || itemDate <= end);
+        });
+      }
+
       setItems(modifiedItems.sort((a, b) => b.sortDate - a.sortDate));
       setItemsFoundCount(foundCounts.reverse());
       setItemsClaimedCount(claimedCounts.reverse());
@@ -163,26 +161,127 @@ export default function DashAnalytics() {
       setItemsPending(getCount(fetchedItems, "Available"));
       setRecentFoundItems(recentFound);
       setRecentClaimedItems(recentClaimed);
-      await fetchHistoricalItems();
+      await fetchHistoricalItems(filters);
     } catch (error) {
       console.error("Failed to fetch items:", error);
     }
   };
 
-   const getCount = (items, status) =>
-     items.filter((item) => item.status === status).length;
+  const fetchHistoricalItems = async (filters = {}) => {
+    try {
+      const res = await fetch(`/api/items/history`);
+      const fetchedHistoricalItems = await res.json();
+
+      let modifiedItems = [];
+
+      if (Array.isArray(fetchedHistoricalItems)) {
+        modifiedItems = fetchedHistoricalItems.map((item) => ({
+          ...item,
+          action: "Delete",
+          displayDate: new Date(item.createdAt).toLocaleDateString(),
+          displayTime: new Date(item.createdAt).toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+          sortDate: new Date(item.createdAt),
+        }));
+      } else if (fetchedHistoricalItems) {
+        modifiedItems = [
+          {
+            ...fetchedHistoricalItems,
+            action: "Delete",
+            displayDate: new Date(
+              fetchedHistoricalItems.createdAt
+            ).toLocaleDateString(),
+            displayTime: new Date(
+              fetchedHistoricalItems.createdAt
+            ).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+            sortDate: new Date(fetchedHistoricalItems.createdAt),
+          },
+        ];
+      } else {
+        console.error("Expected array:", fetchedHistoricalItems);
+      }
+
+      // Apply filters
+      // Apply action filter
+      if (filters.action && filters.action.length > 0) {
+        modifiedItems = modifiedItems.filter((item) =>
+          filters.action.includes(item.action)
+        );
+      }
+      // Apply name filter
+      if (filters.name) {
+        // Split the input by commas and trim spaces
+        const queries = filters.name
+          .split(",")
+          .map((query) => query.trim().toLowerCase());
+
+        // Check if any of the queries match either the item name or the category
+        modifiedItems = modifiedItems.filter((item) =>
+          queries.some(
+            (query) =>
+              item.item.toLowerCase().includes(query) || // Matches item name
+              item.category.toLowerCase().includes(query) || // Matches category
+              item.location.toLowerCase().includes(query) || //Matches location
+              item.department.toLowerCase().includes(query)
+          )
+        );
+      }
+      // Apply date filter
+      if (filters.dateRange && filters.dateRange.length === 2) {
+        const [startDate, endDate] = filters.dateRange;
+
+        // Convert startDate and endDate to Date objects for comparison
+        const start = startDate ? new Date(startDate) : null;
+        const end = endDate ? new Date(endDate) : null;
+
+        modifiedItems = modifiedItems.filter((item) => {
+          const itemDate = new Date(item.createdAt);
+          // Check if itemDate is within the range
+          return (!start || itemDate >= start) && (!end || itemDate <= end);
+        });
+      }
+
+      console.log("Fetched Historical Items:", fetchedHistoricalItems);
+      setHistoricalItems(modifiedItems.sort((a, b) => b.sortDate - a.sortDate));
+    } catch (error) {
+      console.error("Failed to fetch historical items:", error);
+    }
+  };
+
+  const getCount = (items, status) =>
+    items.filter((item) => item.status === status).length;
 
   useEffect(() => {
     console.log("Current User:", currentUser); // Add this line
     if (currentUser && currentUser.id) {
       console.log("Fetching items and users...");
-      fetchItems();
+
+      if (filters) {
+        fetchItems(filters); // Fetch items based on current filters
+        fetchHistoricalItems(filters); // Fetch historical items based on filters
+      }
+
       if (currentUser.role === "admin" || currentUser.role === "superAdmin") {
         fetchUsersCount();
         // fetchItemCount();
       }
     }
-  }, [currentUser]);
+  }, [currentUser, filters]);
+
+  // Apply filters
+  const applyFilters = (newFilters) => {
+    setFilters(newFilters);
+  };
+
+  // Clear filters
+  const clearFilters = () => {
+    setFilters({});
+  };
 
   const fetchUsersCount = async () => {
     try {
@@ -204,54 +303,8 @@ export default function DashAnalytics() {
     }
   };
 
-  // const fetchItemCount = async () => {
-  //   try {
-  //     const res = await fetch("api/items/count");
-
-  //     if (res.ok) {
-  //       const data = await res.json();
-  //       const { totalCount, availableCount, claimedCount } = data;
-
-  //       console.log("Fetched Items Data:", data);
-  //       console.log("Total Items:", totalCount);
-  //       console.log("Available Items:", availableCount);
-  //       console.log("Claimed Items:", claimedCount);
-
-  //       setTotalItemsReported(totalCount);
-  //       setItemsPending(availableCount);
-  //       setItemsClaimed(claimedCount);
-  //     } else {
-  //       console.error("Failed to fetch items count, status:", res.status);
-  //     }
-  //   } catch (error) {
-  //     console.error("Failed to fetch items count:", error);
-  //   }
-  // };
-
-  const generateReport = () => {
-    try {
-
-      const combinedItems = [...items, ...historicalItems];
-
-      const data = combinedItems.map((item) => ({
-        Item: item.item,
-        DateFound: item.displayDate,
-        Location: item.location,
-        Description: item.description,
-        Category: item.category,
-        Status: item.action,
-        ClaimantName: item.claimantName || "N/A",
-        ClaimedDate: item.claimedDate
-          ? new Date(item.claimedDate).toISOString().split("T")[0]
-          : "N/A",
-      }));
-
-      const csv = Papa.unparse(data);
-
-      fileDownload(csv, "found_items_report.csv");
-    } catch (error) {
-      console.error("Error generating report:", error.message);
-    }
+  const handleGenerateReport = () => {
+    generateReport(items, historicalItems);
   };
 
   const pieChartData = {
@@ -457,9 +510,10 @@ export default function DashAnalytics() {
             Audit Logs
           </h1>
           <div className="flex justify-end mb-4">
-            {(currentUser.role === "admin" || currentUser.role === "superAdmin") && (
+            {(currentUser.role === "admin" ||
+              currentUser.role === "superAdmin") && (
               <button
-                onClick={generateReport}
+                onClick={handleGenerateReport}
                 className="bg-red-900 hover:bg-red-700 text-white font-bold py-2 px-4 rounded flex items-center"
               >
                 <HiDownload className="mr-2" />
@@ -467,6 +521,17 @@ export default function DashAnalytics() {
               </button>
             )}
           </div>
+        </div>
+        <div className="flex mb-4">
+          <button
+            onClick={() => setShowFilterModal(true)}
+            className="bg-red-900 hover:bg-red-700 text-white font-bold py-2 px-4 rounded flex items-center"
+          >
+            Filter
+          </button>
+          <Button color="gray" onClick={clearFilters} className="ml-2">
+            Clear Filters
+          </Button>
         </div>
         <br></br>
         <Table
@@ -480,7 +545,8 @@ export default function DashAnalytics() {
             <Table.HeadCell>Item Name</Table.HeadCell>
             <Table.HeadCell>Image</Table.HeadCell>
             <Table.HeadCell>Description</Table.HeadCell>
-            <Table.HeadCell>Location</Table.HeadCell>
+            <Table.HeadCell>Department Surrendered</Table.HeadCell>
+            <Table.HeadCell>Location Found</Table.HeadCell>
             <Table.HeadCell>Category</Table.HeadCell>
           </Table.Head>
           <Table.Body className="bg-white divide-y dark:divide-gray-700 dark:bg-gray-800">
@@ -515,12 +581,19 @@ export default function DashAnalytics() {
                 <Table.Cell className="px-6 py-4">
                   {item.description}
                 </Table.Cell>
+                <Table.Cell className="px-6 py-4">{item.department}</Table.Cell>
                 <Table.Cell className="px-6 py-4">{item.location}</Table.Cell>
                 <Table.Cell className="px-6 py-4">{item.category}</Table.Cell>
               </Table.Row>
             ))}
           </Table.Body>
         </Table>
+        <FilterModal
+          show={showFilterModal}
+          onClose={() => setShowFilterModal(false)}
+          onApplyFilters={applyFilters} // Apply the filters when submitted
+          clearFilters={clearFilters}
+        />
       </div>
     </div>
   );
