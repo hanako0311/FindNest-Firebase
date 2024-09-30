@@ -14,6 +14,8 @@ import Papa from "papaparse";
 import fileDownload from "js-file-download";
 import FilterModal from "../reusable/FilterModal";
 import { generateReport } from "../reusable/ReportGenerator";
+import FilterModal from "../reusable/FilterModal";
+import { generateReport } from "../reusable/ReportGenerator";
 
 export default function DashAnalytics() {
   const [totalItemsReported, setTotalItemsReported] = useState(0);
@@ -31,6 +33,8 @@ export default function DashAnalytics() {
   const [historicalItems, setHistoricalItems] = useState([]);
   const [filters, setFilters] = useState([]);
   const [showFilterModal, setShowFilterModal] = useState(false);
+  const [filters, setFilters] = useState([]);
+  const [showFilterModal, setShowFilterModal] = useState(false);
 
   useEffect(() => {
     console.log("Recent Found Items:", recentFoundItems);
@@ -41,8 +45,7 @@ export default function DashAnalytics() {
     try {
       const res = await fetch(`/api/items`);
       const fetchedItems = await res.json();
-          console.log("Fetched Items:", fetchedItems);
-
+      console.log("Fetched Items:", fetchedItems);
 
       let modifiedItems = [];
       const now = new Date();
@@ -205,38 +208,42 @@ export default function DashAnalytics() {
       // Apply filters
       // Apply action filter
       if (filters.action && filters.action.length > 0) {
-        modifiedItems = modifiedItems.filter((item) => filters.action.includes(item.action));
+        modifiedItems = modifiedItems.filter((item) =>
+          filters.action.includes(item.action)
+        );
       }
       // Apply name filter
       if (filters.name) {
         // Split the input by commas and trim spaces
-        const queries = filters.name.split(',').map(query => query.trim().toLowerCase());
-  
+        const queries = filters.name
+          .split(",")
+          .map((query) => query.trim().toLowerCase());
+
         // Check if any of the queries match either the item name or the category
         modifiedItems = modifiedItems.filter((item) =>
-          queries.some(query =>
-            item.item.toLowerCase().includes(query) ||   // Matches item name
-            item.category.toLowerCase().includes(query) || // Matches category
-            item.location.toLowerCase().includes(query) ||//Matches location
-            item.department.toLowerCase().includes(query)
+          queries.some(
+            (query) =>
+              item.item.toLowerCase().includes(query) || // Matches item name
+              item.category.toLowerCase().includes(query) || // Matches category
+              item.location.toLowerCase().includes(query) || //Matches location
+              item.department.toLowerCase().includes(query)
           )
         );
       }
       // Apply date filter
       if (filters.dateRange && filters.dateRange.length === 2) {
         const [startDate, endDate] = filters.dateRange;
-  
+
         // Convert startDate and endDate to Date objects for comparison
         const start = startDate ? new Date(startDate) : null;
         const end = endDate ? new Date(endDate) : null;
-  
+
         modifiedItems = modifiedItems.filter((item) => {
           const itemDate = new Date(item.createdAt);
           // Check if itemDate is within the range
           return (!start || itemDate >= start) && (!end || itemDate <= end);
         });
       }
-  
 
       console.log("Fetched Historical Items:", fetchedHistoricalItems);
       setHistoricalItems(modifiedItems.sort((a, b) => b.sortDate - a.sortDate));
@@ -246,16 +253,16 @@ export default function DashAnalytics() {
   };
 
   const getCount = (items, status) =>
-     items.filter((item) => item.status === status).length;
+    items.filter((item) => item.status === status).length;
 
   useEffect(() => {
     console.log("Current User:", currentUser); // Add this line
     if (currentUser && currentUser.id) {
       console.log("Fetching items and users...");
-      
+
       if (filters) {
-        fetchItems(filters);  // Fetch items based on current filters
-        fetchHistoricalItems(filters);  // Fetch historical items based on filters
+        fetchItems(filters); // Fetch items based on current filters
+        fetchHistoricalItems(filters); // Fetch historical items based on filters
       }
 
       if (currentUser.role === "admin" || currentUser.role === "superAdmin") {
@@ -265,9 +272,9 @@ export default function DashAnalytics() {
     }
   }, [currentUser, filters]);
 
-   // Apply filters
-   const applyFilters = (newFilters) => {
-    setFilters(newFilters)
+  // Apply filters
+  const applyFilters = (newFilters) => {
+    setFilters(newFilters);
   };
 
   // Clear filters
@@ -502,7 +509,8 @@ export default function DashAnalytics() {
             Audit Logs
           </h1>
           <div className="flex justify-end mb-4">
-            {(currentUser.role === "admin" || currentUser.role === "superAdmin") && (
+            {(currentUser.role === "admin" ||
+              currentUser.role === "superAdmin") && (
               <button
                 onClick={handleGenerateReport}
                 className="bg-red-900 hover:bg-red-700 text-white font-bold py-2 px-4 rounded flex items-center"
@@ -514,15 +522,16 @@ export default function DashAnalytics() {
           </div>
         </div>
         <div className="flex mb-4">
-            <button 
-              onClick={() => setShowFilterModal(true)}
-              className="bg-red-900 hover:bg-red-700 text-white font-bold py-2 px-4 rounded flex items-center"
-              >
-              Filter</button>
-            <Button color="gray" 
-              onClick={clearFilters} 
-              className="ml-2">Clear Filters</Button>
-          </div>
+          <button
+            onClick={() => setShowFilterModal(true)}
+            className="bg-red-900 hover:bg-red-700 text-white font-bold py-2 px-4 rounded flex items-center"
+          >
+            Filter
+          </button>
+          <Button color="gray" onClick={clearFilters} className="ml-2">
+            Clear Filters
+          </Button>
+        </div>
         <br></br>
         <Table
           hoverable
