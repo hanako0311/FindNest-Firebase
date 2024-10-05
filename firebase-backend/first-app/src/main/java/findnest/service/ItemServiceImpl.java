@@ -35,6 +35,13 @@ public class ItemServiceImpl implements ItemService {
         item.setUpdatedAt(timestamp);
         item.setStatus("Available");
 
+        if (item.getTurnoverDate() == null) {
+            item.setTurnoverDate(""); // Default empty value
+        }
+        if (item.getTurnoverPerson() == null) {
+            item.setTurnoverPerson(""); // Default empty value
+        }
+
         dbRef.child(id).setValueAsync(item);
 
         return item;
@@ -107,6 +114,14 @@ public class ItemServiceImpl implements ItemService {
                 if (snapshot.exists()) {
                     item.setId(id);
                     item.setUpdatedAt(Instant.now().toString());
+
+                    if (item.getTurnoverDate() == null) {
+                        item.setTurnoverDate(""); // Default empty value
+                    }
+                    if (item.getTurnoverPerson() == null) {
+                        item.setTurnoverPerson(""); // Default empty value
+                    }
+
                     dbRef.child(id).setValueAsync(item);
                     future.complete(item);
                 } else {
@@ -261,6 +276,14 @@ public class ItemServiceImpl implements ItemService {
                 if (snapshot.exists()) {
                     Items item = snapshot.getValue(Items.class);
                     if (item != null) {
+
+                        if (updates.containsKey("turnoverDate")) {
+                            item.setTurnoverDate((String) updates.get("turnoverDate"));
+                        }
+                        if (updates.containsKey("turnoverPerson")) {
+                            item.setTurnoverPerson((String) updates.get("turnoverPerson"));
+                        }
+                        
                         if (!"Claimed".equalsIgnoreCase(item.getStatus())) {
                             item.setStatus("Claimed");
                             item.setClaimedDate(Instant.now().toString());

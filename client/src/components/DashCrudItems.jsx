@@ -90,6 +90,8 @@ export default function DashCrudItems() {
     claimantName: "",
     claimedDate: "",
     department: "SSO",
+    turnoverDate: "", // Add this field
+    turnoverPerson: "", // Add this field
   });
   const [files, setFiles] = useState([]);
   const [webcamImage, setWebcamImage] = useState(null);
@@ -334,6 +336,8 @@ export default function DashCrudItems() {
     setItemToEdit({
       ...item,
       dateFound: new Date(item.dateFound).toISOString().split("T")[0],
+      turnoverDate: item.turnoverDate || "", // Add this field
+      turnoverPerson: item.turnoverPerson || "", // Add this field
     });
     setShowEditModal(true);
   };
@@ -447,6 +451,8 @@ export default function DashCrudItems() {
             {view === "Claimed Items" && (
               <Table.HeadCell>Claimed Date</Table.HeadCell>
             )}
+            {view === "All Items" && <Table.HeadCell>Turnover Date</Table.HeadCell>} 
+            {view === "All Items" && <Table.HeadCell>Turnover Person</Table.HeadCell>} 
             {view === "All Items" && <Table.HeadCell>Actions</Table.HeadCell>}
           </Table.Head>
           <Table.Body className="bg-white divide-y dark:divide-gray-700 dark:bg-gray-800">
@@ -493,6 +499,20 @@ export default function DashCrudItems() {
                     {new Date(item.claimedDate).toLocaleDateString()}
                   </Table.Cell>
                 )}
+                
+                {view === "All Items" && (
+                  <Table.Cell className="px-6 py-4">
+                      {item.turnoverDate
+                        ? new Date(item.turnoverDate).toLocaleDateString()
+                        : "N/A"}
+                  </Table.Cell>
+                )} {/* Display Turnover Date */}
+                {view === "All Items" && (
+                  <Table.Cell className="px-6 py-4">
+                        {item.turnoverPerson || "N/A"}
+                  </Table.Cell>
+                )} {/* Display Turnover Person */}
+                      
                 {view === "All Items" && (
                   <Table.Cell className="px-6 py-4">
                     <div className="flex items-center ml-auto space-x-2 sm:space-x-3">

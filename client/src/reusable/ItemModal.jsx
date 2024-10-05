@@ -83,6 +83,8 @@ const ItemModal = ({ isOpen, onClose, onSave, itemToEdit }) => {
     claimedDate: "",
     department: "SSO",
     userRef: currentUser?.id,
+    turnoverDate: "", // Add this field
+    turnoverPerson: "", // Add this field
   });
   const webcamRef = useRef(null);
   const [showWebcam, setShowWebcam] = useState(false);
@@ -92,7 +94,9 @@ useEffect(() => {
     if (itemToEdit) {
       setFormData({
         item: itemToEdit.item || "",
-        dateFound: itemToEdit.dateFound || "",
+        dateFound: itemToEdit.dateFound
+        ? new Date(itemToEdit.dateFound).toISOString().split("T")[0]
+        : "", // Set the date found
         location: itemToEdit.location || "",
         description: itemToEdit.description || "",
         imageUrls: itemToEdit.imageUrls || [],
@@ -102,6 +106,8 @@ useEffect(() => {
         claimedDate: itemToEdit.claimedDate || "",
         department: itemToEdit.department || "SSO",
         userRef: itemToEdit.userRef || currentUser?.id,
+        turnoverDate: itemToEdit.turnoverDate || "", // Add this field
+        turnoverPerson: itemToEdit.turnoverPerson || "", // Add this field
       });
     } else {
       setFormData({
@@ -298,9 +304,44 @@ useEffect(() => {
                 className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
                 value={formData.dateFound}
                 onChange={handleChange}
+                disabled={!!itemToEdit}
                 required
               />
             </div>
+            <div className="col-span-6 sm:col-span-3">
+              <label
+                htmlFor="turnoverDate"
+                className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+              >
+                Turnover Date
+              </label>
+              <TextInput
+                type="date"
+                name="turnoverDate"
+                id="turnoverDate"
+                className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
+                value={formData.turnoverDate}
+                onChange={handleChange}
+              />
+            </div>
+
+            <div className="col-span-6 sm:col-span-3">
+              <label
+                htmlFor="turnoverPerson"
+                className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+              >
+                Turnover Person
+              </label>
+              <TextInput
+                type="text"
+                name="turnoverPerson"
+                id="turnoverPerson"
+                className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
+                placeholder="Enter the name of the turnover person"
+                value={formData.turnoverPerson}
+                onChange={handleChange}
+              />
+            </div>  
             <div className="col-span-6 sm:col-span-3">
               <label
                 htmlFor="location"

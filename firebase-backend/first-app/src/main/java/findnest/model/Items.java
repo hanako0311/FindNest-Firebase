@@ -26,6 +26,9 @@ public class Items {
     private String updatedAt;
     private String claimedDate;
 
+    private String turnoverDate; 
+    private String turnoverPerson; 
+
     private long totalCount;
     private long availableCount;
     private long claimedCount;
