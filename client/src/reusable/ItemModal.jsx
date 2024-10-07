@@ -28,7 +28,7 @@ import {
 import { app } from "../firebase";
 
 
-const offices = ["SSO", "SSG", "SSD"];
+const offices = ["SSO", "SSG", "SSD", "Office 1", "Office 2"];
 
 const categories = [
   "Mobile Phones",
@@ -156,14 +156,8 @@ useEffect(() => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    const updatedFormData = {
-      ...formData,
-        updatedAt: new Date().toISOString(),
-    };
-
     try {
-      await onSave(updatedFormData, itemToEdit?.id);
+      await onSave(formData, itemToEdit?.id);
       setSuccessMessage(
         itemToEdit ? "Item updated successfully!" : "Item saved successfully!"
       );
