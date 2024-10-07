@@ -106,19 +106,18 @@ export default function DashCrudItems() {
     setWebcamImage(imageSrc);
   }, [webcamRef, setWebcamImage]);
 
- useEffect(() => {
+  useEffect(() => {
     const fetchItems = async () => {
       try {
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem("token");
         const res = await fetch("/api/items/getItems", {
           headers: {
-            "Authorization": `Bearer ${token}`,
-            "Content-Type": "application/json"
-          }
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
         });
 
         console.log("Response status:", res.status);
-
 
         if (!res.ok) {
           throw new Error(`HTTP error! status: ${res.status}`);
@@ -138,7 +137,7 @@ export default function DashCrudItems() {
     };
 
     fetchItems();
-  }, [view]); 
+  }, [view]);
 
   useEffect(() => {
     const lowerCaseSearchTerm = searchTerm.toLowerCase();
@@ -165,14 +164,14 @@ export default function DashCrudItems() {
   }, [searchTerm, selectedCategory, items, claimedItems, view]);
 
   const handleDeleteItem = async () => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem("token");
     try {
       const res = await fetch(`/api/items/deleteItem/${itemIdToDelete}`, {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        }
+          Authorization: `Bearer ${token}`,
+        },
       });
       const data = await res.json();
       if (res.ok) {
@@ -278,7 +277,7 @@ export default function DashCrudItems() {
     e.preventDefault();
 
     const updatedItem = { ...itemToEdit };
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem("token");
 
     try {
       const res = await fetch(
@@ -287,9 +286,9 @@ export default function DashCrudItems() {
         }`,
         {
           method: itemToEdit._id ? "PUT" : "POST",
-          headers: { 
-            "Content-Type": "application/json", 
-            "Authorization": `Bearer ${token}`, 
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify(updatedItem),
         }

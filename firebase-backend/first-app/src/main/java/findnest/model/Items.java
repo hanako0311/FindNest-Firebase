@@ -25,6 +25,7 @@ public class Items {
     private String createdAt;
     private String updatedAt;
     private String claimedDate;
+    private String claimantImage; // URL of the image for the claimant
 
     private long totalCount;
     private long availableCount;

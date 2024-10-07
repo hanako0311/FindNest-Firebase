@@ -24,6 +24,8 @@ export default function DashItems() {
   const [itemToEdit, setItemToEdit] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
+  const [isImageModalOpen, setImageModalOpen] = useState(false);
+  const [currentImageUrl, setCurrentImageUrl] = useState("");
 
   const navigate = useNavigate(); // Use navigate to switch views
 
@@ -46,6 +48,11 @@ export default function DashItems() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleImageClick = (imageUrl) => {
+    setSelectedImage(imageUrl);
+    setImageModalOpen(true);
   };
 
   // Filter logic with buttons instead of dropdown
@@ -219,6 +226,7 @@ export default function DashItems() {
             {filter === "Claimed Items" && (
               <>
                 <Table.HeadCell>Claimant</Table.HeadCell>
+                <Table.HeadCell>Claimant Image</Table.HeadCell>
                 <Table.HeadCell>Claimed Date</Table.HeadCell>
               </>
             )}
@@ -257,6 +265,19 @@ export default function DashItems() {
                   <>
                     <Table.Cell className="px-6 py-4">
                       {item.claimantName}
+                    </Table.Cell>
+                    <Table.Cell className="px-6 py-4">
+                      {item.claimantImage && (
+                        <img
+                          src={item.claimantImage}
+                          alt="Claimant"
+                          className="w-16 h-16 rounded-lg"
+                          onClick={() => {
+                            setCurrentImageUrl(item.claimantImage);
+                            setImageModalOpen(true);
+                          }}
+                        />
+                      )}
                     </Table.Cell>
                     <Table.Cell className="px-6 py-4">
                       {item.claimedDate}
@@ -301,6 +322,18 @@ export default function DashItems() {
           </Table.Body>
         </Table>
       </div>
+
+      <Modal show={isImageModalOpen} onClose={() => setImageModalOpen(false)}>
+        <Modal.Header />
+        <Modal.Body>
+          <img
+            src={currentImageUrl}
+            alt="Enlarged claimant"
+            className="w-full h-auto"
+            style={{ maxWidth: "100%" }}
+          />
+        </Modal.Body>
+      </Modal>
 
       <Modal
         show={showDeleteModal}
