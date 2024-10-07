@@ -32,6 +32,9 @@ build/
 ### VS Code ###
 .vscode/
 .env
+
+findnest-capstone-firebase-adminsdk-nho4t-dcbd781d19.json
+
 HELP.md
 target/
 !.mvn/wrapper/maven-wrapper.jar
