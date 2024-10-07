@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
-import { Modal, TextInput, Button } from 'flowbite-react';
-
+import { Modal, TextInput, Button, Select } from 'flowbite-react';  // Import Select component if using flowbite
 
 const UserModal = ({ show, onClose, user, onSave, departments, currentUser }) => {
   const [localUser, setLocalUser] = useState({
@@ -44,11 +43,6 @@ const UserModal = ({ show, onClose, user, onSave, departments, currentUser }) =>
     setLocalUser((prevUser) => ({ ...prevUser, [id]: value }));
   };
 
-  const handleRadioChange = (e) => {
-    const { name, value } = e.target;
-    setLocalUser((prevUser) => ({ ...prevUser, [name]: value }));
-  };
-
   const handleSubmit = (e) => {
     e.preventDefault();
     const validationError = validateRolePermissions();
@@ -71,7 +65,6 @@ const UserModal = ({ show, onClose, user, onSave, departments, currentUser }) =>
     }
     return null;
   };
-
 
   return (
     <Modal show={show} onClose={onClose} size="2xl">
@@ -139,27 +132,28 @@ const UserModal = ({ show, onClose, user, onSave, departments, currentUser }) =>
                 onChange={handleChange}
               />
             </div>
+
+            {/* Department selection using a dropdown */}
             <div className="col-span-6 sm:col-span-3">
               <label htmlFor="department" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
                 Department
               </label>
-              <div className="flex space-x-4">
+              <select
+                id="department"
+                name="department"
+                value={localUser.department}
+                onChange={handleChange}
+                className="block w-full mt-1 border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+              >
+                <option value="" disabled>Select a department</option>
                 {departments.map((dept) => (
-                  <label key={dept} className="flex items-center">
-                    <input
-                      type="radio"
-                      id="department"
-                      name="department"
-                      value={dept}
-                      checked={localUser.department === dept}
-                      onChange={handleRadioChange}
-                      className="form-radio"
-                    />
-                    <span className="ml-2">{dept}</span>
-                  </label>
+                  <option key={dept} value={dept}>
+                    {dept}
+                  </option>
                 ))}
-              </div>
+              </select>
             </div>
+
             <div className="col-span-6 sm:col-span-3">
               <label htmlFor="password" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
                 Password
@@ -179,6 +173,7 @@ const UserModal = ({ show, onClose, user, onSave, departments, currentUser }) =>
                 </div>
               </div>
             </div>
+
             {currentUser.role === 'superAdmin' && (
               <div className="col-span-6 sm:col-span-3">
                 <label htmlFor="role" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
@@ -192,7 +187,7 @@ const UserModal = ({ show, onClose, user, onSave, departments, currentUser }) =>
                       name="role"
                       value="admin"
                       checked={localUser.role === 'admin'}
-                      onChange={handleRadioChange}
+                      onChange={handleChange}
                       className="form-radio"
                     />
                     <span className="ml-2">Admin</span>
@@ -204,7 +199,7 @@ const UserModal = ({ show, onClose, user, onSave, departments, currentUser }) =>
                       name="role"
                       value="staff"
                       checked={localUser.role === 'staff'}
-                      onChange={handleRadioChange}
+                      onChange={handleChange}
                       className="form-radio"
                     />
                     <span className="ml-2">Staff</span>
@@ -213,8 +208,10 @@ const UserModal = ({ show, onClose, user, onSave, departments, currentUser }) =>
               </div>
             )}
           </div>
+
           {errorMessage && <div className="mb-4 text-red-500">{errorMessage}</div>}
           {successMessage && <div className="mb-4 text-green-500">{successMessage}</div>}
+
           <div className="items-center p-6 border-t border-gray-200 rounded-b dark:border-gray-700">
             <Button type="submit" gradientDuoTone="pinkToOrange" className="w-full">
               Save
