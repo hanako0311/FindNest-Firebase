@@ -4,7 +4,6 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
@@ -25,12 +24,13 @@ public class Items {
     private String createdAt;
     private String updatedAt;
     private String claimedDate;
+    private String claimantImage; // URL of the image for the claimant
 
+    // Added turnoverDate and turnoverPerson fields
     private String turnoverDate; 
-    private String turnoverPerson; 
+    private String turnoverPerson;
 
     private long totalCount;
     private long availableCount;
     private long claimedCount;
 }
-

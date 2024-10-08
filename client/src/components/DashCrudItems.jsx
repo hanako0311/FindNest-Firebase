@@ -90,8 +90,8 @@ export default function DashCrudItems() {
     claimantName: "",
     claimedDate: "",
     department: "SSO",
-    turnoverDate: "", // Add this field
-    turnoverPerson: "", // Add this field
+    turnoverDate: "", // Added field for turnoverDate
+    turnoverPerson: "", // Added field for turnoverPerson
   });
   const [files, setFiles] = useState([]);
   const [webcamImage, setWebcamImage] = useState(null);
@@ -108,19 +108,18 @@ export default function DashCrudItems() {
     setWebcamImage(imageSrc);
   }, [webcamRef, setWebcamImage]);
 
- useEffect(() => {
+  useEffect(() => {
     const fetchItems = async () => {
       try {
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem("token");
         const res = await fetch("/api/items/getItems", {
           headers: {
-            "Authorization": `Bearer ${token}`,
-            "Content-Type": "application/json"
-          }
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
         });
 
         console.log("Response status:", res.status);
-
 
         if (!res.ok) {
           throw new Error(`HTTP error! status: ${res.status}`);
@@ -140,7 +139,7 @@ export default function DashCrudItems() {
     };
 
     fetchItems();
-  }, [view]); 
+  }, [view]);
 
   useEffect(() => {
     const lowerCaseSearchTerm = searchTerm.toLowerCase();
@@ -167,14 +166,14 @@ export default function DashCrudItems() {
   }, [searchTerm, selectedCategory, items, claimedItems, view]);
 
   const handleDeleteItem = async () => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem("token");
     try {
       const res = await fetch(`/api/items/deleteItem/${itemIdToDelete}`, {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        }
+          Authorization: `Bearer ${token}`,
+        },
       });
       const data = await res.json();
       if (res.ok) {
@@ -280,7 +279,10 @@ export default function DashCrudItems() {
     e.preventDefault();
 
     const updatedItem = { ...itemToEdit };
-    const token = localStorage.getItem('token');
+
+    console.log('Item being saved:', updatedItem); // added for debugging
+
+    const token = localStorage.getItem("token");
 
     try {
       const res = await fetch(
@@ -289,9 +291,9 @@ export default function DashCrudItems() {
         }`,
         {
           method: itemToEdit._id ? "PUT" : "POST",
-          headers: { 
-            "Content-Type": "application/json", 
-            "Authorization": `Bearer ${token}`, 
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify(updatedItem),
         }
@@ -336,8 +338,8 @@ export default function DashCrudItems() {
     setItemToEdit({
       ...item,
       dateFound: new Date(item.dateFound).toISOString().split("T")[0],
-      turnoverDate: item.turnoverDate || "", // Add this field
-      turnoverPerson: item.turnoverPerson || "", // Add this field
+      turnoverDate: item.turnoverDate || "", // Ensure turnoverDate is editable
+      turnoverPerson: item.turnoverPerson || "", // Ensure turnoverPerson is editable
     });
     setShowEditModal(true);
   };
@@ -354,6 +356,8 @@ export default function DashCrudItems() {
       claimantName: "",
       claimedDate: "",
       department: "SSO",
+      turnoverDate: "", // Added turnoverDate default empty value
+      turnoverPerson: "", // Added turnoverPerson default empty value
     });
     setFiles([]);
     setShowAddModal(true);
@@ -371,6 +375,8 @@ export default function DashCrudItems() {
       claimantName: "",
       claimedDate: "",
       department: "SSO",
+      turnoverDate: "", // Reset turnoverDate field
+      turnoverPerson: "", // Reset turnoverPerson field
     });
     setFiles([]);
     setWebcamImage(null);
@@ -451,9 +457,14 @@ export default function DashCrudItems() {
             {view === "Claimed Items" && (
               <Table.HeadCell>Claimed Date</Table.HeadCell>
             )}
-            {view === "All Items" && <Table.HeadCell>Turnover Date</Table.HeadCell>} 
-            {view === "All Items" && <Table.HeadCell>Turnover Person</Table.HeadCell>} 
-            {view === "All Items" && <Table.HeadCell>Actions</Table.HeadCell>}
+            {/* Add Turnover Date and Turnover Person for unclaimed items */}
+            {view === "All Items" && (
+              <>
+                <Table.HeadCell>Turnover Date</Table.HeadCell>
+                <Table.HeadCell>Turnover Person</Table.HeadCell>
+                <Table.HeadCell>Actions</Table.HeadCell>
+              </>
+            )}
           </Table.Head>
           <Table.Body className="bg-white divide-y dark:divide-gray-700 dark:bg-gray-800">
             {filteredItems.map((item) => (
@@ -499,37 +510,37 @@ export default function DashCrudItems() {
                     {new Date(item.claimedDate).toLocaleDateString()}
                   </Table.Cell>
                 )}
-                
+                {/* Add Turnover Date and Turnover Person fields for unclaimed items */}
                 {view === "All Items" && (
-                  <Table.Cell className="px-6 py-4">
+                  <>
+                    <Table.Cell className="px-6 py-4">
                       {item.turnoverDate
                         ? new Date(item.turnoverDate).toLocaleDateString()
-                        : "N/A"}
-                  </Table.Cell>
-                )} {/* Display Turnover Date */}
-                {view === "All Items" && (
-                  <Table.Cell className="px-6 py-4">
-                        {item.turnoverPerson || "N/A"}
-                  </Table.Cell>
-                )} {/* Display Turnover Person */}
-                      
-                {view === "All Items" && (
-                  <Table.Cell className="px-6 py-4">
-                    <div className="flex items-center ml-auto space-x-2 sm:space-x-3">
-                      <Button onClick={() => handleEditItem(item)} color="blue">
-                        <HiPencilAlt className="w-4 h-4 mr-2" /> Edit
-                      </Button>
-                      <Button
-                        color="failure"
-                        onClick={() => {
-                          setShowModal(true);
-                          setItemIdToDelete(item._id);
-                        }}
-                      >
-                        <HiTrash className="w-4 h-4 mr-2" /> Delete
-                      </Button>
-                    </div>
-                  </Table.Cell>
+                        : "-"}
+                    </Table.Cell>
+                    <Table.Cell className="px-6 py-4">
+                      {item.turnoverPerson || "-"}
+                    </Table.Cell>
+                    <Table.Cell className="px-6 py-4">
+                      <div className="flex items-center ml-auto space-x-2 sm:space-x-3">
+                        <Button
+                          onClick={() => handleEditItem(item)}
+                          color="blue"
+                        >
+                          <HiPencilAlt className="w-4 h-4 mr-2" /> Edit
+                        </Button>
+                        <Button
+                          color="failure"
+                          onClick={() => {
+                            setShowModal(true);
+                            setItemIdToDelete(item._id);
+                          }}
+                        >
+                          <HiTrash className="w-4 h-4 mr-2" /> Delete
+                        </Button>
+                      </div>
+                    </Table.Cell>
+                  </>
                 )}
               </Table.Row>
             ))}
@@ -708,6 +719,49 @@ export default function DashCrudItems() {
                   ))}
                 </div>
               </div>
+              {/* Added fields for Turnover Date and Turnover Person */}
+              <div className="col-span-6 sm:col-span-3">
+                <label
+                  htmlFor="turnoverDate"
+                  className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+                >
+                  Turnover Date
+                </label>
+                <TextInput
+                  type="date"
+                  name="turnoverDate"
+                  value={itemToEdit.turnoverDate}
+                  onChange={(e) =>
+                    setItemToEdit({
+                      ...itemToEdit,
+                      turnoverDate: e.target.value,
+                    })
+                  }
+                  id="turnoverDate"
+                />
+              </div>
+              <div className="col-span-6 sm:col-span-3">
+                <label
+                  htmlFor="turnoverPerson"
+                  className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+                >
+                  Turnover Person
+                </label>
+                <TextInput
+                  type="text"
+                  name="turnoverPerson"
+                  value={itemToEdit.turnoverPerson}
+                  onChange={(e) =>
+                    setItemToEdit({
+                      ...itemToEdit,
+                      turnoverPerson: e.target.value,
+                    })
+                  }
+                  id="turnoverPerson"
+                  placeholder="Turnover Person"
+                />
+              </div>
+              {/* End of added fields */}
               <div className="col-span-6">
                 <label
                   htmlFor="imageUrls"
@@ -973,10 +1027,53 @@ export default function DashCrudItems() {
                   ))}
                 </div>
               </div>
+              {/* Added fields for Turnover Date and Turnover Person */}
+              <div className="col-span-6 sm:col-span-3">
+                <label
+                  htmlFor="turnoverDate"
+                  className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+                >
+                  Turnover Date
+                </label>
+                <TextInput
+                  type="date"
+                  name="turnoverDate"
+                  value={itemToEdit.turnoverDate}
+                  onChange={(e) =>
+                    setItemToEdit({
+                      ...itemToEdit,
+                      turnoverDate: e.target.value,
+                    })
+                  }
+                  id="turnoverDate"
+                />
+              </div>
+              <div className="col-span-6 sm:col-span-3">
+                <label
+                  htmlFor="turnoverPerson"
+                  className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+                >
+                  Turnover Person
+                </label>
+                <TextInput
+                  type="text"
+                  name="turnoverPerson"
+                  value={itemToEdit.turnoverPerson}
+                  onChange={(e) =>
+                    setItemToEdit({
+                      ...itemToEdit,
+                      turnoverPerson: e.target.value,
+                    })
+                  }
+                  id="turnoverPerson"
+                  placeholder="Turnover Person"
+                />
+              </div>
+              {/* End of added fields */}
               <div className="col-span-6">
                 <label
                   htmlFor="imageUrls"
-                  className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+                  className="block mb-2 text-sm font-medium text.text-gray-900 dark:text-white"
                 >
                   Image URLs
                 </label>
