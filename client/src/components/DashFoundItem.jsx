@@ -80,7 +80,7 @@ export default function DashFoundItem() {
           item.status.toLowerCase() === "available" // Show available items
       );
 
-      setItems(unclaimedAndAvailableItems);
+      setItems(unclaimedAndAvailableItems.reverse());
     } catch (error) {
       console.error("Error fetching items:", error);
     }
