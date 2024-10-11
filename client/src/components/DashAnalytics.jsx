@@ -549,7 +549,7 @@ export default function DashAnalytics() {
           <Table.Head className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
             <Table.HeadCell>
               {filters.action && filters.action.length > 0
-                ? filters.action.join(", ") // Join multiple actions with commas
+                ? filters.action.join("/ ") // Join multiple actions with commas
                 : "Action"} {/* Default to "Action" if no filter is selected */}
             </Table.HeadCell>
             <Table.HeadCell>

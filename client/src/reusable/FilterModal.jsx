@@ -101,7 +101,7 @@ const FilterModal = ({ show, onClose, onApplyFilters, clearFilters }) => {
           <input
             type="date"
             id="startDate"
-            max={endDate}  // Disable future dates and dates later than endDate
+            max={endDate || today}  // Disable future dates and dates later than endDate
             value={startDate || ''}  // Use an empty string if no date is selected
             onChange={(e) => setStartDate(e.target.value)}
           />
@@ -111,6 +111,7 @@ const FilterModal = ({ show, onClose, onApplyFilters, clearFilters }) => {
             type="date"
             id="endDate"
             max={today}  // Disable future dates
+            min={startDate}
             value={endDate || ''}  // Use an empty string if no date is selected
             onChange={(e) => setEndDate(e.target.value)}
           />
