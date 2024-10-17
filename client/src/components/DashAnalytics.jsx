@@ -176,12 +176,12 @@ export default function DashAnalytics() {
         modifiedItems = fetchedHistoricalItems.map((item) => ({
           ...item,
           action: "Deleted",
-          displayDate: new Date(item.createdAt).toLocaleDateString(),
-          displayTime: new Date(item.createdAt).toLocaleTimeString([], {
+          displayDate: new Date(item.updatedAt || item.createdAt).toLocaleDateString(),
+          displayTime: new Date(item.updatedAt || item.createdAt).toLocaleTimeString([], {
             hour: "2-digit",
             minute: "2-digit",
           }),
-          sortDate: new Date(item.createdAt),
+          sortDate: new Date(item.updatedAt || createdAt),
         }));
       } else if (fetchedHistoricalItems) {
         modifiedItems = [
@@ -189,15 +189,15 @@ export default function DashAnalytics() {
             ...fetchedHistoricalItems,
             action: "Deleted",
             displayDate: new Date(
-              fetchedHistoricalItems.createdAt
+              fetchHistoricalItems.updatedAt || fetchedHistoricalItems.createdAt  
             ).toLocaleDateString(),
             displayTime: new Date(
-              fetchedHistoricalItems.createdAt
+              fetchHistoricalItems.updatedAt || fetchedHistoricalItems.createdAt
             ).toLocaleTimeString([], {
               hour: "2-digit",
               minute: "2-digit",
             }),
-            sortDate: new Date(fetchedHistoricalItems.createdAt),
+            sortDate: new Date(fetchedHistoricalItems.updatedAt || fetchHistoricalItems.createdAt),
           },
         ];
       } else {
