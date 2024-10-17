@@ -550,18 +550,34 @@ export default function DashAnalytics() {
             <Table.HeadCell>
               {filters.action && filters.action.length > 0
                 ? filters.action.join("/ ") // Join multiple actions with commas
-                : "Action"} {/* Default to "Action" if no filter is selected */}
+                : "Action"}{" "}
+              {/* Default to "Action" if no filter is selected */}
             </Table.HeadCell>
             <Table.HeadCell>
               {filters.dateRange && filters.dateRange.length === 2
-                ? filters.dateRange[0] && !filters.dateRange[1]  // Only start date selected
-                  ? new Date(new Date(filters.dateRange[0]).setDate(new Date(filters.dateRange[0]).getDate() + 1)).toLocaleDateString('en-GB')  // Show day before for start date
-                  : !filters.dateRange[0] && filters.dateRange[1]  // Only end date selected
-                  ? new Date(filters.dateRange[1]).toLocaleDateString('en-GB')  // Format end date
-                  : filters.dateRange[0] === filters.dateRange[1]  // Both dates selected but are the same
-                  ? new Date(new Date(filters.dateRange[0]).setDate(new Date(filters.dateRange[0]).getDate() + 1)).toLocaleDateString('en-GB')  // Show day before if same
-                  : `${new Date(new Date(filters.dateRange[0]).setDate(new Date(filters.dateRange[0]).getDate() + 1)).toLocaleDateString('en-GB')} - ${new Date(filters.dateRange[1]).toLocaleDateString('en-GB')}`  // Show adjusted start and regular end date
-                : "Date"} {/* Default to "Date" if no filter is selected */}
+                ? filters.dateRange[0] && !filters.dateRange[1] // Only start date selected
+                  ? new Date(
+                      new Date(filters.dateRange[0]).setDate(
+                        new Date(filters.dateRange[0]).getDate() + 1
+                      )
+                    ).toLocaleDateString("en-GB") // Show day before for start date
+                  : !filters.dateRange[0] && filters.dateRange[1] // Only end date selected
+                  ? new Date(filters.dateRange[1]).toLocaleDateString("en-GB") // Format end date
+                  : filters.dateRange[0] === filters.dateRange[1] // Both dates selected but are the same
+                  ? new Date(
+                      new Date(filters.dateRange[0]).setDate(
+                        new Date(filters.dateRange[0]).getDate() + 1
+                      )
+                    ).toLocaleDateString("en-GB") // Show day before if same
+                  : `${new Date(
+                      new Date(filters.dateRange[0]).setDate(
+                        new Date(filters.dateRange[0]).getDate() + 1
+                      )
+                    ).toLocaleDateString("en-GB")} - ${new Date(
+                      filters.dateRange[1]
+                    ).toLocaleDateString("en-GB")}` // Show adjusted start and regular end date
+                : "Date"}{" "}
+              {/* Default to "Date" if no filter is selected */}
             </Table.HeadCell>
             <Table.HeadCell>Time</Table.HeadCell>
             <Table.HeadCell>Item Name</Table.HeadCell>

@@ -2,11 +2,14 @@ import React, { useState } from 'react';
 import { Modal, Button, Checkbox, Label, TextInput, Datepicker } from 'flowbite-react';
 
 const FilterModal = ({ show, onClose, onApplyFilters, clearFilters }) => {
-  const [actionFilter, setActionFilter] = useState({ found: false, claimed: false, deleted: false });
-  const [itemName, setItemName] = useState('');
-  const [startDate, setStartDate] = useState(null);  
-  const [endDate, setEndDate] = useState(null); 
-
+  const [actionFilter, setActionFilter] = useState({
+    found: false,
+    claimed: false,
+    deleted: false,
+  });
+  const [itemName, setItemName] = useState("");
+  const [startDate, setStartDate] = useState(null);
+  const [endDate, setEndDate] = useState(null);
 
   const handleActionChange = (e) => {
     setActionFilter({
@@ -24,19 +27,21 @@ const FilterModal = ({ show, onClose, onApplyFilters, clearFilters }) => {
   const handleApplyFilters = () => {
     // Collect selected actions
     const selectedActions = [];
-    if (actionFilter.found) selectedActions.push('Found');
-    if (actionFilter.claimed) selectedActions.push('Claimed');
-    if (actionFilter.deleted) selectedActions.push('Deleted');
-    
-    const adjustedStartDate = startDate ? adjustDateForFiltering(startDate, -1) : null;
-    const adjustedEndDate = endDate ? adjustDateForFiltering(endDate, 0) : null;  // Adjust end date to include entire day
+    if (actionFilter.found) selectedActions.push("Found");
+    if (actionFilter.claimed) selectedActions.push("Claimed");
+    if (actionFilter.deleted) selectedActions.push("Deleted");
+
+    const adjustedStartDate = startDate
+      ? adjustDateForFiltering(startDate, -1)
+      : null;
+    const adjustedEndDate = endDate ? adjustDateForFiltering(endDate, 0) : null; // Adjust end date to include entire day
 
     // Pass all filters
     onApplyFilters({ 
       action: selectedActions, 
       name: itemName.trim() || null,
       dateRange: [adjustedStartDate, adjustedEndDate],
-     });  
+    });
     onClose();
   };
 
@@ -101,8 +106,8 @@ const FilterModal = ({ show, onClose, onApplyFilters, clearFilters }) => {
           <input
             type="date"
             id="startDate"
-            max={endDate || today}  // Disable future dates and dates later than endDate
-            value={startDate || ''}  // Use an empty string if no date is selected
+            max={endDate || today} // Disable future dates and dates later than endDate
+            value={startDate || ""} // Use an empty string if no date is selected
             onChange={(e) => setStartDate(e.target.value)}
           />
 
@@ -110,9 +115,9 @@ const FilterModal = ({ show, onClose, onApplyFilters, clearFilters }) => {
           <input
             type="date"
             id="endDate"
-            max={today}  // Disable future dates
+            max={today} // Disable future dates
             min={startDate}
-            value={endDate || ''}  // Use an empty string if no date is selected
+            value={endDate || ""} // Use an empty string if no date is selected
             onChange={(e) => setEndDate(e.target.value)}
           />
         </div>

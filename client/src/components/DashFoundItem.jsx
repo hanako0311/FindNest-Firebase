@@ -80,7 +80,7 @@ export default function DashFoundItem() {
           item.status.toLowerCase() === "available" // Show available items
       );
 
-      setItems(unclaimedAndAvailableItems);
+      setItems(unclaimedAndAvailableItems.reverse());
     } catch (error) {
       console.error("Error fetching items:", error);
     }
@@ -157,36 +157,26 @@ export default function DashFoundItem() {
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
           Found Items
         </h1>
-
-        {/* View Switch Dropdown */}
-        <Select
-          className="ml-4"
-          value="FoundItems" // Set the initial value to the current view
-          onChange={handleViewChange}
-        >
-          <option value="FoundItems">Found Items View</option>
-          <option value="DashItems">Items View</option>
-        </Select>
       </div>
 
-      {/* Search Bar and Filters */}
+      {/* Container for Search, Category, Date Range, and View Switch */}
       <form
         onSubmit={handleSubmit}
-        className="w-full mb-6 flex flex-col md:flex-row md:space-x-6 space-y-4 md:space-y-0"
+        className="w-full mb-6 flex flex-wrap md:flex-row md:space-x-4 space-y-4 md:space-y-0 items-center p-4 rounded-md bg-white dark:bg-gray-800"
       >
         {/* Shortened Search Bar */}
         <TextInput
           type="text"
           placeholder="Search..."
           rightIcon={AiOutlineSearch}
-          className="w-full sm:w-64 p-2"
+          className="flex-1 p-2"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
 
         {/* Category Filter */}
         <Select
-          className="w-full md:w-1/3 p-2"
+          className="flex-1 p-2"
           value={selectedCategory}
           onChange={(e) => setSelectedCategory(e.target.value)}
         >
@@ -199,7 +189,7 @@ export default function DashFoundItem() {
         </Select>
 
         {/* Date Range Filter */}
-        <div className="relative w-full md:w-1/3">
+        <div className="relative flex-1">
           <button
             type="button"
             className="w-full flex justify-between items-center bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2"
@@ -243,6 +233,16 @@ export default function DashFoundItem() {
             </div>
           )}
         </div>
+
+        {/* View Switch Dropdown */}
+        <Select
+          className="flex-1 p-2"
+          value="FoundItems" // Set the initial value to the current view
+          onChange={handleViewChange}
+        >
+          <option value="FoundItems">Found Items View</option>
+          <option value="DashItems">Items View</option>
+        </Select>
       </form>
 
       {/* Items Grid */}

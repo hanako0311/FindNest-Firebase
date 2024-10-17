@@ -24,6 +24,8 @@ export default function DashItems() {
   const [itemToEdit, setItemToEdit] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
+  const [isImageModalOpen, setImageModalOpen] = useState(false);
+  const [currentImageUrl, setCurrentImageUrl] = useState("");
 
   const navigate = useNavigate(); // Use navigate to switch views
 
@@ -48,9 +50,15 @@ export default function DashItems() {
     }
   };
 
-  // Filter logic with buttons instead of dropdown
-  const filteredItems = items
+  const handleImageClick = (imageUrl) => {
+    setCurrentImageUrl(imageUrl);
+    setImageModalOpen(true);
+  };
+
+  // Sort and filter logic
+  const sortedItems = items
     .filter((item) => {
+      // Filter items based on the selected tab (All, Unclaimed, Claimed)
       if (filter === "All Items") {
         return true; // Show all items
       }
@@ -58,14 +66,43 @@ export default function DashItems() {
         ? item.status === "Available"
         : item.status === "Claimed";
     })
-    .filter((item) =>
-      item.item.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    .filter((item) => {
+      // Search across item name, description, location, category, and date found
+      const searchTerm = searchQuery.toLowerCase();
+      return (
+        item.item.toLowerCase().includes(searchTerm) ||
+        (item.description &&
+          item.description.toLowerCase().includes(searchTerm)) ||
+        (item.location && item.location.toLowerCase().includes(searchTerm)) ||
+        (item.category && item.category.toLowerCase().includes(searchTerm)) ||
+        (item.dateFound &&
+          new Date(item.dateFound)
+            .toLocaleDateString("en-US", {
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            })
+            .toLowerCase()
+            .includes(searchTerm))
+      );
+    })
+    .sort((a, b) => {
+      // Sorting logic based on the selected tab
+      if (filter === "All Items") {
+        return new Date(b.dateFound) - new Date(a.dateFound); // Sort by recently reported items
+      } else if (filter === "Unclaimed Items") {
+        return new Date(b.dateFound) - new Date(a.dateFound); // Sort by recent unclaimed items
+      } else if (filter === "Claimed Items") {
+        return new Date(b.claimedDate) - new Date(a.claimedDate); // Sort by recently claimed items
+      }
+      return 0;
+    });
 
   const handleSave = async (item, id) => {
     try {
       const url = id ? `/api/items/${id}` : "/api/items/save";
       const method = id ? "PUT" : "POST";
+      console.log("Item being saved:", item); // Debugging log to check the item data
       const response = await fetch(url, {
         method,
         headers: {
@@ -121,7 +158,7 @@ export default function DashItems() {
   };
 
   return (
-    <div className="container mx-auto p-3 scrollbar scrollbar-track-slate-100 scrollbar-thumb-slate-300 dark:scrollbar-track-slate-700 dark:scrollbar-thumb-slate-500 overflow-x-auto">
+    <div className="container mx-auto p-3 overflow-x-auto">
       {/* Toast Messages */}
       {successMessage && (
         <Toast className="fixed top-4 right-4 z-50">
@@ -155,8 +192,7 @@ export default function DashItems() {
             className="w-48"
           >
             <option value="DashItems">Items View</option>
-            <option value="FoundItems">Found Items View</option>{" "}
-            {/* Option for DashFoundItems */}
+            <option value="FoundItems">Found Items View</option>
           </Select>
 
           <TextInput
@@ -171,7 +207,7 @@ export default function DashItems() {
       </div>
 
       {/* Filter Buttons */}
-      <div className="flex mb-4 space-x-3">
+      <div className="flex mb-4 space-x-2 p-3">
         <Button
           color={filter === "All Items" ? "blue" : "gray"}
           onClick={() => setFilter("All Items")}
@@ -200,7 +236,7 @@ export default function DashItems() {
         </Button>
       </div>
 
-      <div className="overflow-x-auto">
+      <div className="container mx-auto p-3 scrollbar overflow-x-auto">
         <Table
           hoverable
           className="min-w-full text-sm text-left text-gray-500 dark:text-gray-400"
@@ -214,61 +250,111 @@ export default function DashItems() {
             <Table.HeadCell>Date Found</Table.HeadCell>
             <Table.HeadCell>Office Stored</Table.HeadCell>
             <Table.HeadCell>Status</Table.HeadCell>
-
-            {/* Conditionally display Claimant and Claimed Date columns for Claimed Items */}
             {filter === "Claimed Items" && (
               <>
                 <Table.HeadCell>Claimant</Table.HeadCell>
+                <Table.HeadCell>Claimant Image</Table.HeadCell>
                 <Table.HeadCell>Claimed Date</Table.HeadCell>
               </>
             )}
-
-            {/* Conditionally display Actions column for Unclaimed Items */}
+            {filter === "Unclaimed Items" && (
+              <>
+                <Table.HeadCell>Turnover Date</Table.HeadCell>
+                <Table.HeadCell>Turnover Person</Table.HeadCell>
+              </>
+            )}
             {filter === "Unclaimed Items" && (
               <Table.HeadCell>Actions</Table.HeadCell>
             )}
           </Table.Head>
 
           <Table.Body className="bg-white divide-y dark:divide-gray-700 dark:bg-gray-800">
-            {filteredItems.map((item) => (
+            {sortedItems.map((item) => (
               <Table.Row
                 key={item.id}
                 className="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-600"
               >
                 <Table.Cell className="px-6 py-4">{item.item}</Table.Cell>
-                <Table.Cell className="px-6 py-4">
+                <Table.Cell className="px-0 py-4">
                   <img
-                    className="w-24 h-auto"
+                    className="w-24 h-24 rounded-md object-cover object-center"
                     src={item.imageUrls && item.imageUrls[0]}
                     alt={item.item}
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = "default-image.png"; // Fallback image URL
+                    }}
                   />
                 </Table.Cell>
+
                 <Table.Cell className="px-6 py-4">
                   {item.description}
                 </Table.Cell>
                 <Table.Cell className="px-6 py-4">{item.location}</Table.Cell>
                 <Table.Cell className="px-6 py-4">{item.category}</Table.Cell>
-                <Table.Cell className="px-6 py-4">{item.dateFound}</Table.Cell>
+                <Table.Cell className="px-6 py-4">
+                  {item.dateFound
+                    ? new Date(item.dateFound).toLocaleDateString("en-US", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      })
+                    : "-"}
+                </Table.Cell>
+
                 <Table.Cell className="px-6 py-4">{item.department}</Table.Cell>
                 <Table.Cell className="px-6 py-4">{item.status}</Table.Cell>
 
-                {/* Render Claimant and Claimed Date for Claimed Items */}
                 {filter === "Claimed Items" && (
                   <>
                     <Table.Cell className="px-6 py-4">
                       {item.claimantName}
                     </Table.Cell>
-                    <Table.Cell className="px-6 py-4">
-                      {item.claimedDate}
+                    <Table.Cell className="px-3 py-4">
+                      {item.claimantImage && (
+                        <img
+                          src={item.claimantImage}
+                          alt="Claimant"
+                          className="w-24 h-24 rounded-md object-cover object-center cursor-pointer"
+                          onClick={() => {
+                            setCurrentImageUrl(item.claimantImage);
+                            setImageModalOpen(true);
+                          }}
+                        />
+                      )}
+                    </Table.Cell>
+                    <Table.Cell className="px-2 py-4">
+                      {item.claimedDate
+                        ? new Date(item.claimedDate).toLocaleDateString(
+                            "en-US",
+                            {
+                              year: "numeric",
+                              month: "long",
+                              day: "numeric",
+                            }
+                          )
+                        : "-"}
                     </Table.Cell>
                   </>
                 )}
 
-                {/* Render Actions only for Unclaimed Items */}
+                {filter === "Unclaimed Items" && (
+                  <>
+                    <Table.Cell className="px-6 py-4">
+                      {item.turnoverDate
+                        ? new Date(item.turnoverDate).toLocaleDateString()
+                        : "-"}
+                    </Table.Cell>
+                    <Table.Cell className="px-6 py-4">
+                      {item.turnoverPerson || "-"}
+                    </Table.Cell>
+                  </>
+                )}
+
                 {filter === "Unclaimed Items" &&
                   item.status === "Available" && (
-                    <Table.Cell className="px-6 py-4">
-                      <div className="flex items-center ml-auto space-x-2 sm:space-x-3">
+                    <Table.Cell className="px-0 py-4">
+                      <div className="flex items-center justify-center space-x-1">
                         <Button
                           color="blue"
                           onClick={() => {
@@ -291,7 +377,6 @@ export default function DashItems() {
                     </Table.Cell>
                   )}
 
-                {/* If no action is required, hide the last cell */}
                 {(filter !== "Unclaimed Items" ||
                   item.status !== "Available") && (
                   <Table.Cell colSpan={1} className="hidden" />
@@ -301,6 +386,18 @@ export default function DashItems() {
           </Table.Body>
         </Table>
       </div>
+
+      <Modal show={isImageModalOpen} onClose={() => setImageModalOpen(false)}>
+        <Modal.Header />
+        <Modal.Body>
+          <img
+            src={currentImageUrl}
+            alt="Enlarged claimant"
+            className="w-full h-auto"
+            style={{ maxWidth: "100%" }}
+          />
+        </Modal.Body>
+      </Modal>
 
       <Modal
         show={showDeleteModal}
