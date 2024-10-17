@@ -12,7 +12,7 @@ const FilterModal = ({ show, onClose, onApplyFilters, clearFilters }) => {
   const [actionFilter, setActionFilter] = useState({
     found: false,
     claimed: false,
-    delete: false,
+    deleted: false,
   });
   const [itemName, setItemName] = useState("");
   const [startDate, setStartDate] = useState(null);
@@ -25,24 +25,35 @@ const FilterModal = ({ show, onClose, onApplyFilters, clearFilters }) => {
     });
   };
 
+  const adjustDateForFiltering = (date, adjustByDays = 0) => {
+    const adjustedDate = new Date(date);
+    adjustedDate.setDate(adjustedDate.getDate() + adjustByDays);
+    return adjustedDate;
+  };
+
   const handleApplyFilters = () => {
     // Collect selected actions
     const selectedActions = [];
     if (actionFilter.found) selectedActions.push("Found");
     if (actionFilter.claimed) selectedActions.push("Claimed");
-    if (actionFilter.delete) selectedActions.push("Delete");
+    if (actionFilter.deleted) selectedActions.push("Deleted");
+
+    const adjustedStartDate = startDate
+      ? adjustDateForFiltering(startDate, -1)
+      : null;
+    const adjustedEndDate = endDate ? adjustDateForFiltering(endDate, 0) : null; // Adjust end date to include entire day
 
     // Pass all filters
     onApplyFilters({
       action: selectedActions,
       name: itemName.trim() || null,
-      dateRange: [startDate, endDate],
+      dateRange: [adjustedStartDate, adjustedEndDate],
     });
     onClose();
   };
 
   const handleClearFilters = () => {
-    setActionFilter({ found: false, claimed: false, delete: false });
+    setActionFilter({ found: false, claimed: false, deleted: false });
     setItemName("");
     setStartDate(null);
     setEndDate(null);
@@ -76,12 +87,12 @@ const FilterModal = ({ show, onClose, onApplyFilters, clearFilters }) => {
             />
             <Label htmlFor="claimed">Claimed</Label>
             <Checkbox
-              id="delete"
-              name="delete"
-              checked={actionFilter.delete}
+              id="deleted"
+              name="deleted"
+              checked={actionFilter.deleted}
               onChange={handleActionChange}
             />
-            <Label htmlFor="delete">Delete</Label>
+            <Label htmlFor="deleted">Deleted</Label>
           </div>
         </div>
 
@@ -104,7 +115,7 @@ const FilterModal = ({ show, onClose, onApplyFilters, clearFilters }) => {
           <input
             type="date"
             id="startDate"
-            max={today} // Disable future dates
+            max={endDate || today} // Disable future dates and dates later than endDate
             value={startDate || ""} // Use an empty string if no date is selected
             onChange={(e) => setStartDate(e.target.value)}
           />
@@ -114,6 +125,7 @@ const FilterModal = ({ show, onClose, onApplyFilters, clearFilters }) => {
             type="date"
             id="endDate"
             max={today} // Disable future dates
+            min={startDate}
             value={endDate || ""} // Use an empty string if no date is selected
             onChange={(e) => setEndDate(e.target.value)}
           />

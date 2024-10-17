@@ -265,14 +265,21 @@ public class ItemServiceImpl implements ItemService {
                             item.setStatus("Claimed");
                             item.setClaimedDate(Instant.now().toString());
                         }
-                        if (updates.containsKey("claimantName")) {
-                            item.setClaimantName((String) updates.get("claimantName"));
-                        }
-                        if (updates.containsKey("userRef")) {
-                            item.setUserRef((String) updates.get("userRef"));
-                        }
+                        updates.forEach((key, value) -> {
+                            switch (key) {
+                                case "claimantName":
+                                    item.setClaimantName((String) value);
+                                    break;
+                                case "claimantImage":
+                                    item.setClaimantImage((String) value);
+                                    break;
+                                case "userRef":
+                                    item.setUserRef((String) value);
+                                    break;
+                            }
+                        });
+    
                         item.setUpdatedAt(Instant.now().toString());
-
                         dbRef.child(id).setValueAsync(item);
                         future.complete(item);
                     } else {

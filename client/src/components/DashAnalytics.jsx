@@ -139,6 +139,7 @@ export default function DashAnalytics() {
       }
 
       //Apply Date Filter
+      // Apply date filter
       if (filters.dateRange && filters.dateRange.length === 2) {
         const [startDate, endDate] = filters.dateRange;
 
@@ -147,8 +148,10 @@ export default function DashAnalytics() {
         const end = endDate ? new Date(endDate) : null;
 
         modifiedItems = modifiedItems.filter((item) => {
-          const itemDate = new Date(item.createdAt);
-          // Check if itemDate is within the range
+          // Convert displayDate (string) back to a Date object for comparison
+          const itemDate = new Date(item.displayDate); // Convert displayDate (e.g., "09/21/2023") to a Date object
+
+          // Check if itemDate (parsed from displayDate) is within the range
           return (!start || itemDate >= start) && (!end || itemDate <= end);
         });
       }
@@ -177,7 +180,7 @@ export default function DashAnalytics() {
       if (Array.isArray(fetchedHistoricalItems)) {
         modifiedItems = fetchedHistoricalItems.map((item) => ({
           ...item,
-          action: "Delete",
+          action: "Deleted",
           displayDate: new Date(item.createdAt).toLocaleDateString(),
           displayTime: new Date(item.createdAt).toLocaleTimeString([], {
             hour: "2-digit",
@@ -189,7 +192,7 @@ export default function DashAnalytics() {
         modifiedItems = [
           {
             ...fetchedHistoricalItems,
-            action: "Delete",
+            action: "Deleted",
             displayDate: new Date(
               fetchedHistoricalItems.createdAt
             ).toLocaleDateString(),
@@ -239,9 +242,19 @@ export default function DashAnalytics() {
         const start = startDate ? new Date(startDate) : null;
         const end = endDate ? new Date(endDate) : null;
 
+        if (start) {
+          start.setHours(0, 0, 0, 0); // Set time to 00:00:00 for start date
+        }
+
+        if (end) {
+          end.setHours(23, 59, 59, 999); // Set time to 23:59:59 for end date
+        }
+
         modifiedItems = modifiedItems.filter((item) => {
-          const itemDate = new Date(item.createdAt);
-          // Check if itemDate is within the range
+          // Convert displayDate (string) back to a Date object for comparison
+          const itemDate = new Date(item.displayDate);
+
+          // Check if itemDate (parsed from displayDate) is within the range
           return (!start || itemDate >= start) && (!end || itemDate <= end);
         });
       }
@@ -539,8 +552,38 @@ export default function DashAnalytics() {
           className="min-w-full text-sm text-left text-gray-500 dark:text-gray-400"
         >
           <Table.Head className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
-            <Table.HeadCell>Action</Table.HeadCell>
-            <Table.HeadCell>Date</Table.HeadCell>
+            <Table.HeadCell>
+              {filters.action && filters.action.length > 0
+                ? filters.action.join("/ ") // Join multiple actions with commas
+                : "Action"}{" "}
+              {/* Default to "Action" if no filter is selected */}
+            </Table.HeadCell>
+            <Table.HeadCell>
+              {filters.dateRange && filters.dateRange.length === 2
+                ? filters.dateRange[0] && !filters.dateRange[1] // Only start date selected
+                  ? new Date(
+                      new Date(filters.dateRange[0]).setDate(
+                        new Date(filters.dateRange[0]).getDate() + 1
+                      )
+                    ).toLocaleDateString("en-GB") // Show day before for start date
+                  : !filters.dateRange[0] && filters.dateRange[1] // Only end date selected
+                  ? new Date(filters.dateRange[1]).toLocaleDateString("en-GB") // Format end date
+                  : filters.dateRange[0] === filters.dateRange[1] // Both dates selected but are the same
+                  ? new Date(
+                      new Date(filters.dateRange[0]).setDate(
+                        new Date(filters.dateRange[0]).getDate() + 1
+                      )
+                    ).toLocaleDateString("en-GB") // Show day before if same
+                  : `${new Date(
+                      new Date(filters.dateRange[0]).setDate(
+                        new Date(filters.dateRange[0]).getDate() + 1
+                      )
+                    ).toLocaleDateString("en-GB")} - ${new Date(
+                      filters.dateRange[1]
+                    ).toLocaleDateString("en-GB")}` // Show adjusted start and regular end date
+                : "Date"}{" "}
+              {/* Default to "Date" if no filter is selected */}
+            </Table.HeadCell>
             <Table.HeadCell>Time</Table.HeadCell>
             <Table.HeadCell>Item Name</Table.HeadCell>
             <Table.HeadCell>Image</Table.HeadCell>
@@ -570,7 +613,7 @@ export default function DashAnalytics() {
                     <img
                       src={item.imageUrls?.[0] || "default-image.png"}
                       alt={item.item}
-                      className="w-24 h-auto"
+                      className="w-24 h-12"
                       onError={(e) => {
                         e.target.onError = null;
                         e.target.src = "default-image.png";

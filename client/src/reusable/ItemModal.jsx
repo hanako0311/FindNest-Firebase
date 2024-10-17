@@ -27,7 +27,6 @@ import {
 } from "firebase/storage";
 import { app } from "../firebase";
 
-
 const offices = ["SSO", "SSG", "SSD"];
 
 const categories = [
@@ -62,8 +61,7 @@ const categories = [
   "Toys and Games",
   "Decorative Items",
   "Other",
-];          
-
+];
 
 const ItemModal = ({ isOpen, onClose, onSave, itemToEdit }) => {
   const [files, setFiles] = useState([]);
@@ -83,16 +81,20 @@ const ItemModal = ({ isOpen, onClose, onSave, itemToEdit }) => {
     claimedDate: "",
     department: "SSO",
     userRef: currentUser?.id,
+    turnoverDate: "", // Added turnoverDate
+    turnoverPerson: "", // Added turnoverPerson
   });
   const webcamRef = useRef(null);
   const [showWebcam, setShowWebcam] = useState(false);
   const [imageUploadError, setImageUploadError] = useState(false);
 
-useEffect(() => {
+  useEffect(() => {
     if (itemToEdit) {
       setFormData({
         item: itemToEdit.item || "",
-        dateFound: itemToEdit.dateFound || "",
+        dateFound: itemToEdit.dateFound
+          ? new Date(itemToEdit.dateFound).toISOString().split("T")[0]
+          : "",
         location: itemToEdit.location || "",
         description: itemToEdit.description || "",
         imageUrls: itemToEdit.imageUrls || [],
@@ -102,43 +104,35 @@ useEffect(() => {
         claimedDate: itemToEdit.claimedDate || "",
         department: itemToEdit.department || "SSO",
         userRef: itemToEdit.userRef || currentUser?.id,
+        turnoverDate: itemToEdit.turnoverDate || "", // Added turnoverDate
+        turnoverPerson: itemToEdit.turnoverPerson || "", // Added turnoverPerson
       });
     } else {
-      setFormData({
-        item: "",
-        dateFound: "",
-        location: "",
-        description: "",
-        imageUrls: [],
-        category: "Other",
-        status: "Available",
-        claimantName: "",
-        claimedDate: "",
-        department: "SSO",
-        userRef: currentUser?.id,
-      });
+      resetForm();
     }
   }, [itemToEdit, currentUser]);
 
-    const resetForm = () => {
-      setFormData({
-        item: "",
-        dateFound: "",
-        location: "",
-        description: "",
-        imageUrls: [],
-        category: "Other",
-        status: "Available",
-        claimantName: "",
-        claimedDate: "",
-        department: "SSO",
-        userRef: currentUser?.id,
-      });
-      setFiles([]);
-      setWebcamImage(null);
-      setSuccessMessage("");
-      setErrorMessage("");
-    };
+  const resetForm = () => {
+    setFormData({
+      item: "",
+      dateFound: "",
+      location: "",
+      description: "",
+      imageUrls: [],
+      category: "Other",
+      status: "Available",
+      claimantName: "",
+      claimedDate: "",
+      department: "SSO",
+      userRef: currentUser?.id,
+      turnoverDate: "", // Reset turnoverDate
+      turnoverPerson: "", // Reset turnoverPerson
+    });
+    setFiles([]);
+    setWebcamImage(null);
+    setSuccessMessage("");
+    setErrorMessage("");
+  };
 
   const captureWebcamImage = useCallback(() => {
     const imageSrc = webcamRef.current.getScreenshot();
@@ -159,7 +153,7 @@ useEffect(() => {
 
     const updatedFormData = {
       ...formData,
-        updatedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
 
     try {
@@ -183,8 +177,6 @@ useEffect(() => {
 
   const handleImageSubmit = async () => {
     if (files.length > 0 && files.length + formData.imageUrls.length <= 5) {
-      console.log("Files:", files);
-
       const promises = [];
       for (let i = 0; i < files.length; i++) {
         promises.push(storeImage(files[i]));
@@ -254,11 +246,11 @@ useEffect(() => {
     }
   };
 
-   useEffect(() => {
-     if (!isOpen) {
-       resetForm();
-     }
-   }, [isOpen]);
+  useEffect(() => {
+    if (!isOpen) {
+      resetForm();
+    }
+  }, [isOpen]);
 
   return (
     <Modal show={isOpen} onClose={onClose} size="2xl">
@@ -299,6 +291,7 @@ useEffect(() => {
                 value={formData.dateFound}
                 onChange={handleChange}
                 required
+                disabled={!!itemToEdit} // Disable when editing
               />
             </div>
             <div className="col-span-6 sm:col-span-3">
@@ -321,20 +314,35 @@ useEffect(() => {
             </div>
             <div className="col-span-6 sm:col-span-3">
               <label
-                htmlFor="description"
+                htmlFor="turnoverDate" // Added turnoverDate field
                 className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
               >
-                Description
+                Turnover Date
               </label>
-              <input
-                type="text"
-                name="description"
-                id="description"
+              <TextInput
+                type="date"
+                name="turnoverDate"
+                id="turnoverDate"
                 className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
-                placeholder="Description"
-                value={formData.description}
+                value={formData.turnoverDate}
                 onChange={handleChange}
-                required
+              />
+            </div>
+            <div className="col-span-6 sm:col-span-3">
+              <label
+                htmlFor="turnoverPerson" // Added turnoverPerson field
+                className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+              >
+                Turnover Person
+              </label>
+              <TextInput
+                type="text"
+                name="turnoverPerson"
+                id="turnoverPerson"
+                className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
+                placeholder="Enter the name of the turnover person"
+                value={formData.turnoverPerson}
+                onChange={handleChange}
               />
             </div>
             <div className="col-span-6 sm:col-span-3">
@@ -405,16 +413,6 @@ useEffect(() => {
               >
                 Upload Images
               </Button>
-              {/* {webcamImage && (
-                <Button
-                  type="button"
-                  gradientDuoTone="pinkToOrange"
-                  onClick={uploadWebcamImage}
-                  className="mt-2 ml-2"
-                >
-                  Upload Webcam Image
-                </Button>
-              )} */}
               {imageUploadError && (
                 <Alert color="failure" className="mt-2">
                   {imageUploadError}
@@ -480,15 +478,15 @@ useEffect(() => {
                       </Button>
                     )}
                   </div>
-                  {webcamImage && (
-                    <div className="mt-4">
-                      <img
-                        src={webcamImage}
-                        alt="Captured"
-                        className="w-full h-64 object-cover rounded-lg shadow-md"
-                      />
-                    </div>
-                  )}
+                </div>
+              )}
+              {webcamImage && (
+                <div className="mt-4">
+                  <img
+                    src={webcamImage}
+                    alt="Captured"
+                    className="w-full h-64 object-cover rounded-lg shadow-md"
+                  />
                 </div>
               )}
             </div>

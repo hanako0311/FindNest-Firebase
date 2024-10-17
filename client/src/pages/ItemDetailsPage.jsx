@@ -52,7 +52,7 @@ function ItemDetailModal({ id, isOpen, onClose }) {
         </button>
       </Modal.Header>
       <Modal.Body>
-        <div className="flex flex-col lg:flex-row gap-6">
+        <div className="flex flex-col lg:flex-row gap-6 ">
           <div className="flex-1 relative">
             {item.imageUrls.length > 0 ? (
               <img
