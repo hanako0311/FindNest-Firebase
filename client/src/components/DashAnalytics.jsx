@@ -81,15 +81,15 @@ export default function DashAnalytics() {
           key: `${item.id}-Found`,
           action: "Found",
           displayDate: new Date(
-            item.createdAt || item.updatedAt
+            item.createdAt || item.dateFound
           ).toLocaleDateString(),
           displayTime: new Date(
-            item.createdAt || item.updatedAt
+            item.createdAt || item.dateFound
           ).toLocaleTimeString([], {
             hour: "2-digit",
             minute: "2-digit",
           }),
-          sortDate: new Date(item.createdAt),
+          sortDate: new Date(item.createdAt || item.dateFound),
         });
 
         if (item.status === "Claimed" && item.claimedDate) {
@@ -110,6 +110,29 @@ export default function DashAnalytics() {
           });
         }
       });
+
+       // Fetch Historical (Deleted) Items and Merge
+      const fetchHistoricalItems = async () => {
+        const res = await fetch(`/api/items/history`);
+        const fetchedHistoricalItems = await res.json();
+
+        if (Array.isArray(fetchedHistoricalItems)) {
+          fetchedHistoricalItems.forEach((item) => {
+            modifiedItems.push({
+              ...item,
+              action: "Deleted",
+              displayDate: new Date(item.updatedAt || item.createdAt).toLocaleDateString(),
+              displayTime: new Date(item.updatedAt || item.createdAt).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              }),
+              sortDate: new Date(item.updatedAt || item.createdAt),
+            });
+          });
+        }
+      };
+
+      await fetchHistoricalItems();
 
       // Apply filters
       // Apply action filter
@@ -546,7 +569,7 @@ export default function DashAnalytics() {
           hoverable
           className="min-w-full text-sm text-left text-gray-500 dark:text-gray-400"
         >
-          <Table.Head className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+          <Table.Head>
             <Table.HeadCell>
               {filters.action && filters.action.length > 0
                 ? filters.action.join("/ ") // Join multiple actions with commas
@@ -588,7 +611,7 @@ export default function DashAnalytics() {
             <Table.HeadCell>Category</Table.HeadCell>
           </Table.Head>
           <Table.Body className="bg-white divide-y dark:divide-gray-700 dark:bg-gray-800">
-            {[...items, ...historicalItems].map((item, index) => (
+            {[...items, /*...historicalItems*/].map((item, index) => (
               <Table.Row
                 key={item.key || index}
                 className="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-600"
@@ -633,6 +656,63 @@ export default function DashAnalytics() {
           clearFilters={clearFilters}
         />
       </div>
+      <br></br>
+      <div>
+        <div>
+          <h1 className="text-3xl font-bold text-gray-700 dark:text-gray-300 mb-4">
+            Deleted Items
+          </h1>
+          <Table
+            hoverable
+            className="min-w-full text-sm text-left text-gray-500 dark:text-gray-400"
+          >
+            <Table.Head>
+              <Table.HeadCell>Action</Table.HeadCell>
+              <Table.HeadCell>Date</Table.HeadCell>
+              <Table.HeadCell>Time</Table.HeadCell>
+              <Table.HeadCell>Item Name</Table.HeadCell>
+              <Table.HeadCell>Image</Table.HeadCell>
+              <Table.HeadCell>Description</Table.HeadCell>
+              <Table.HeadCell>Department Surrendered</Table.HeadCell>
+              <Table.HeadCell>Location</Table.HeadCell>
+              <Table.HeadCell>Category</Table.HeadCell>
+            </Table.Head>
+            <Table.Body className="bg-white divide-y dark:divide-gray-700 dark:bg-gray-800">
+              {historicalItems.map((item, index) => (
+                <Table.Row
+                  key={item.key || index}
+                  className="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-600"
+                >
+                  <Table.Cell className="px-6 py-4">{item.action}</Table.Cell>
+                  <Table.Cell className="px-6 py-4">{item.displayDate}</Table.Cell>
+                  <Table.Cell className="px-6 py-4">{item.displayTime}</Table.Cell>
+                  <Table.Cell className="px-6 py-4">
+                    <Link to={`/item/${item.id}`}>{item.item}</Link>
+                  </Table.Cell>
+                  <Table.Cell className="px-6 py-4">
+                    {item.imageUrls && item.imageUrls[0] && (
+                      <img
+                        src={item.imageUrls?.[0] || "default-image.png"}
+                        alt={item.item}
+                        className="w-24 h-auto"
+                        onError={(e) => {
+                          e.target.onError = null;
+                          e.target.src = "default-image.png";
+                        }}
+                      />
+                    )}
+                  </Table.Cell>
+                  <Table.Cell className="px-6 py-4">{item.description}</Table.Cell>
+                  <Table.Cell className="px-6 py-4">{item.department}</Table.Cell>
+                  <Table.Cell className="px-6 py-4">{item.location}</Table.Cell>
+                  <Table.Cell className="px-6 py-4">{item.category}</Table.Cell>
+                </Table.Row>
+              ))}
+            </Table.Body>
+          </Table>
+        </div>
+      </div>
     </div>
+    
   );
 }
