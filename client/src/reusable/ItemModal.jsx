@@ -27,7 +27,7 @@ import {
 } from "firebase/storage";
 import { app } from "../firebase";
 
-const offices = ["SSO", "SSG", "SSD"];
+const offices = ["SSO", "SSG", "SSD",];
 
 const categories = [
   "Mobile Phones",
