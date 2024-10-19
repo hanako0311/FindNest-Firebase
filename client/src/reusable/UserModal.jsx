@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import { Modal, TextInput, Button } from 'flowbite-react';
 
-
 const UserModal = ({ show, onClose, user, onSave, departments, currentUser }) => {
   const [localUser, setLocalUser] = useState({
     firstName: "",
@@ -72,13 +71,13 @@ const UserModal = ({ show, onClose, user, onSave, departments, currentUser }) =>
     return null;
   };
 
-
   return (
     <Modal show={show} onClose={onClose} size="2xl">
       <Modal.Header>{user ? "Edit User" : "Add New User"}</Modal.Header>
       <Modal.Body>
         <form onSubmit={handleSubmit}>
           <div className="grid grid-cols-6 gap-6">
+            {/* First Name */}
             <div className="col-span-6 sm:col-span-3">
               <label htmlFor="firstName" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
                 First Name
@@ -91,6 +90,8 @@ const UserModal = ({ show, onClose, user, onSave, departments, currentUser }) =>
                 onChange={handleChange}
               />
             </div>
+
+            {/* Middle Name */}
             <div className="col-span-6 sm:col-span-3">
               <label htmlFor="middleName" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
                 Middle Name
@@ -103,6 +104,8 @@ const UserModal = ({ show, onClose, user, onSave, departments, currentUser }) =>
                 onChange={handleChange}
               />
             </div>
+
+            {/* Last Name */}
             <div className="col-span-6 sm:col-span-3">
               <label htmlFor="lastName" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
                 Last Name
@@ -115,6 +118,8 @@ const UserModal = ({ show, onClose, user, onSave, departments, currentUser }) =>
                 onChange={handleChange}
               />
             </div>
+
+            {/* Username */}
             <div className="col-span-6 sm:col-span-3">
               <label htmlFor="username" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
                 Username
@@ -127,6 +132,8 @@ const UserModal = ({ show, onClose, user, onSave, departments, currentUser }) =>
                 onChange={handleChange}
               />
             </div>
+
+            {/* Email */}
             <div className="col-span-6 sm:col-span-3">
               <label htmlFor="email" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
                 Email
@@ -139,27 +146,39 @@ const UserModal = ({ show, onClose, user, onSave, departments, currentUser }) =>
                 onChange={handleChange}
               />
             </div>
+
+            {/* Department */}
             <div className="col-span-6 sm:col-span-3">
               <label htmlFor="department" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
                 Department
               </label>
               <div className="flex space-x-4">
-                {departments.map((dept) => (
-                  <label key={dept} className="flex items-center">
-                    <input
-                      type="radio"
-                      id="department"
-                      name="department"
-                      value={dept}
-                      checked={localUser.department === dept}
-                      onChange={handleRadioChange}
-                      className="form-radio"
-                    />
-                    <span className="ml-2">{dept}</span>
-                  </label>
-                ))}
+                {departments.map((dept) => {
+                  const isDisabled =
+                    currentUser.role === "admin" && currentUser.department !== dept;
+                  return (
+                    <label
+                      key={dept}
+                      className={`flex items-center ${isDisabled ? "opacity-50" : ""}`}
+                    >
+                      <input
+                        type="radio"
+                        id="department"
+                        name="department"
+                        value={dept}
+                        checked={localUser.department === dept}
+                        onChange={handleRadioChange}
+                        disabled={isDisabled}
+                        className="form-radio"
+                      />
+                      <span className="ml-2">{dept}</span>
+                    </label>
+                  );
+                })}
               </div>
             </div>
+
+            {/* Password */}
             <div className="col-span-6 sm:col-span-3">
               <label htmlFor="password" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
                 Password
@@ -179,6 +198,8 @@ const UserModal = ({ show, onClose, user, onSave, departments, currentUser }) =>
                 </div>
               </div>
             </div>
+
+            {/* Role (only superAdmins can modify) */}
             {currentUser.role === 'superAdmin' && (
               <div className="col-span-6 sm:col-span-3">
                 <label htmlFor="role" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
@@ -213,8 +234,11 @@ const UserModal = ({ show, onClose, user, onSave, departments, currentUser }) =>
               </div>
             )}
           </div>
+
+          {/* Error and success messages */}
           {errorMessage && <div className="mb-4 text-red-500">{errorMessage}</div>}
           {successMessage && <div className="mb-4 text-green-500">{successMessage}</div>}
+
           <div className="items-center p-6 border-t border-gray-200 rounded-b dark:border-gray-700">
             <Button type="submit" gradientDuoTone="pinkToOrange" className="w-full">
               Save
