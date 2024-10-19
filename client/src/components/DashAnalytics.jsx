@@ -10,8 +10,6 @@ import {
   HiClipboardList,
   HiDownload,
 } from "react-icons/hi";
-import Papa from "papaparse";
-import fileDownload from "js-file-download";
 import FilterModal from "../reusable/FilterModal";
 import { generateReport } from "../reusable/ReportGenerator";
 
@@ -60,8 +58,10 @@ export default function DashAnalytics() {
           foundCounts[daysAgoFound]++;
           if (recentFound.length < 5) {
             recentFound.push(item);
+            recentFound.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
           }
         }
+  
 
         if (item.status === "Claimed" && item.claimedDate) {
           const claimedDate = new Date(item.claimedDate);
@@ -72,6 +72,7 @@ export default function DashAnalytics() {
             claimedCounts[daysAgoClaimed]++;
             if (recentClaimed.length < 5) {
               recentClaimed.push(item);
+              recentClaimed.sort((a, b) => new Date(b.claimedDate) - new Date(a.claimedDate));
             }
           }
         }
@@ -182,105 +183,8 @@ export default function DashAnalytics() {
       setItemsPending(getCount(fetchedItems, "Available"));
       setRecentFoundItems(recentFound);
       setRecentClaimedItems(recentClaimed);
-      await fetchHistoricalItems(filters);
     } catch (error) {
       console.error("Failed to fetch items:", error);
-    }
-  };
-
-  const fetchHistoricalItems = async (filters = {}) => {
-    try {
-      const res = await fetch(`/api/items/history`);
-      const fetchedHistoricalItems = await res.json();
-
-      let modifiedItems = [];
-
-      if (Array.isArray(fetchedHistoricalItems)) {
-        modifiedItems = fetchedHistoricalItems.map((item) => ({
-          ...item,
-          action: "Deleted",
-          displayDate: new Date(item.updatedAt || item.createdAt).toLocaleDateString(),
-          displayTime: new Date(item.updatedAt || item.createdAt).toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
-          sortDate: new Date(item.updatedAt || createdAt),
-        }));
-      } else if (fetchedHistoricalItems) {
-        modifiedItems = [
-          {
-            ...fetchedHistoricalItems,
-            action: "Deleted",
-            displayDate: new Date(
-              fetchHistoricalItems.updatedAt || fetchedHistoricalItems.createdAt  
-            ).toLocaleDateString(),
-            displayTime: new Date(
-              fetchHistoricalItems.updatedAt || fetchedHistoricalItems.createdAt
-            ).toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-            }),
-            sortDate: new Date(fetchedHistoricalItems.updatedAt || fetchHistoricalItems.createdAt),
-          },
-        ];
-      } else {
-        console.error("Expected array:", fetchedHistoricalItems);
-      }
-
-      // Apply filters
-      // Apply action filter
-      if (filters.action && filters.action.length > 0) {
-        modifiedItems = modifiedItems.filter((item) =>
-          filters.action.includes(item.action)
-        );
-      }
-      // Apply name filter
-      if (filters.name) {
-        // Split the input by commas and trim spaces
-        const queries = filters.name
-          .split(",")
-          .map((query) => query.trim().toLowerCase());
-
-        // Check if any of the queries match either the item name or the category
-        modifiedItems = modifiedItems.filter((item) =>
-          queries.some(
-            (query) =>
-              item.item.toLowerCase().includes(query) || // Matches item name
-              item.category.toLowerCase().includes(query) || // Matches category
-              item.location.toLowerCase().includes(query) || //Matches location
-              item.department.toLowerCase().includes(query)
-          )
-        );
-      }
-      // Apply date filter
-      if (filters.dateRange && filters.dateRange.length === 2) {
-        const [startDate, endDate] = filters.dateRange;
-
-        // Convert startDate and endDate to Date objects for comparison
-        const start = startDate ? new Date(startDate) : null;
-        const end = endDate ? new Date(endDate) : null;
-
-        if (start) {
-          start.setHours(0, 0, 0, 0);  // Set time to 00:00:00 for start date
-        }
-      
-        if (end) {
-          end.setHours(23, 59, 59, 999);  // Set time to 23:59:59 for end date
-        }
-
-        modifiedItems = modifiedItems.filter((item) => {
-          // Convert displayDate (string) back to a Date object for comparison
-          const itemDate = new Date(item.displayDate);
-
-          // Check if itemDate (parsed from displayDate) is within the range
-          return (!start || itemDate >= start) && (!end || itemDate <= end);
-        });
-      }
-
-      console.log("Fetched Historical Items:", fetchedHistoricalItems);
-      setHistoricalItems(modifiedItems.sort((a, b) => b.sortDate - a.sortDate));
-    } catch (error) {
-      console.error("Failed to fetch historical items:", error);
     }
   };
 
@@ -294,15 +198,43 @@ export default function DashAnalytics() {
 
       if (filters) {
         fetchItems(filters); // Fetch items based on current filters
-        fetchHistoricalItems(filters); // Fetch historical items based on filters
       }
 
       if (currentUser.role === "admin" || currentUser.role === "superAdmin") {
-        fetchUsersCount();
+        //fetchUsersCount();
         // fetchItemCount();
+        fetchAllUsers();
       }
     }
   }, [currentUser, filters]);
+
+  useEffect(() => {
+    if (users.length > 0 && currentUser) {
+      let filteredUsers = users;
+
+      // Admin users should only count users in their department
+      if (currentUser.role === "admin") {
+        filteredUsers = users.filter(user => user.department === currentUser.department && user.role === "staff");
+      }
+
+      // Set the total users based on the filtered users
+      setTotalUsers(filteredUsers.length);
+    }
+  }, [users, currentUser]);
+
+  const fetchAllUsers = async () => {
+    try {
+      const res = await fetch('/api/users'); // Fetch all users from the backend
+      if (res.ok) {
+        const data = await res.json();
+        setUsers(data); // Store all users
+      } else {
+        console.error("Failed to fetch users, status:", res.status);
+      }
+    } catch (error) {
+      console.error("Error fetching users:", error);
+    }
+  };
 
   // Apply filters
   const applyFilters = (newFilters) => {
@@ -314,28 +246,8 @@ export default function DashAnalytics() {
     setFilters({});
   };
 
-  const fetchUsersCount = async () => {
-    try {
-      const res = await fetch("/api/users/count");
-
-      if (res.ok) {
-        const data = await res.text();
-        const totalUsers = parseInt(data, 10);
-
-        console.log("Fetched Users Data:", totalUsers);
-
-        setTotalUsers(totalUsers);
-        console.log("Total Users:", totalUsers);
-      } else {
-        console.error("Failed to fetch users, status:", res.status);
-      }
-    } catch (error) {
-      console.error("Failed to fetch users:", error);
-    }
-  };
-
   const handleGenerateReport = () => {
-    generateReport(items, historicalItems);
+    generateReport(items);
   };
 
   const pieChartData = {
@@ -586,21 +498,23 @@ export default function DashAnalytics() {
                     ).toLocaleDateString("en-GB") // Show day before for start date
                   : !filters.dateRange[0] && filters.dateRange[1] // Only end date selected
                   ? new Date(filters.dateRange[1]).toLocaleDateString("en-GB") // Format end date
-                  : filters.dateRange[0] === filters.dateRange[1] // Both dates selected but are the same
+                  : filters.dateRange[0] && filters.dateRange[1] && filters.dateRange[0] === filters.dateRange[1] // Both dates selected but are the same
                   ? new Date(
                       new Date(filters.dateRange[0]).setDate(
                         new Date(filters.dateRange[0]).getDate() + 1
                       )
                     ).toLocaleDateString("en-GB") // Show day before if same
-                  : `${new Date(
+                  : filters.dateRange[0] && filters.dateRange[1] // Both start and end date selected
+                  ? `${new Date(
                       new Date(filters.dateRange[0]).setDate(
                         new Date(filters.dateRange[0]).getDate() + 1
                       )
                     ).toLocaleDateString("en-GB")} - ${new Date(
                       filters.dateRange[1]
                     ).toLocaleDateString("en-GB")}` // Show adjusted start and regular end date
-                : "Date"}{" "}
-              {/* Default to "Date" if no filter is selected */}
+                  : "Date" // Default to "Date" if no valid dates are selected
+                : "Date" // Default to "Date" if no filter is selected
+              }
             </Table.HeadCell>
             <Table.HeadCell>Time</Table.HeadCell>
             <Table.HeadCell>Item Name</Table.HeadCell>
@@ -611,7 +525,7 @@ export default function DashAnalytics() {
             <Table.HeadCell>Category</Table.HeadCell>
           </Table.Head>
           <Table.Body className="bg-white divide-y dark:divide-gray-700 dark:bg-gray-800">
-            {[...items, /*...historicalItems*/].map((item, index) => (
+            {[...items].map((item, index) => (
               <Table.Row
                 key={item.key || index}
                 className="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-600"
@@ -652,65 +566,9 @@ export default function DashAnalytics() {
         <FilterModal
           show={showFilterModal}
           onClose={() => setShowFilterModal(false)}
-          onApplyFilters={applyFilters} // Apply the filters when submitted
+          onApplyFilters={applyFilters} 
           clearFilters={clearFilters}
         />
-      </div>
-      <br></br>
-      <div>
-        <div>
-          <h1 className="text-3xl font-bold text-gray-700 dark:text-gray-300 mb-4">
-            Deleted Items
-          </h1>
-          <Table
-            hoverable
-            className="min-w-full text-sm text-left text-gray-500 dark:text-gray-400"
-          >
-            <Table.Head>
-              <Table.HeadCell>Action</Table.HeadCell>
-              <Table.HeadCell>Date</Table.HeadCell>
-              <Table.HeadCell>Time</Table.HeadCell>
-              <Table.HeadCell>Item Name</Table.HeadCell>
-              <Table.HeadCell>Image</Table.HeadCell>
-              <Table.HeadCell>Description</Table.HeadCell>
-              <Table.HeadCell>Department Surrendered</Table.HeadCell>
-              <Table.HeadCell>Location</Table.HeadCell>
-              <Table.HeadCell>Category</Table.HeadCell>
-            </Table.Head>
-            <Table.Body className="bg-white divide-y dark:divide-gray-700 dark:bg-gray-800">
-              {historicalItems.map((item, index) => (
-                <Table.Row
-                  key={item.key || index}
-                  className="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-600"
-                >
-                  <Table.Cell className="px-6 py-4">{item.action}</Table.Cell>
-                  <Table.Cell className="px-6 py-4">{item.displayDate}</Table.Cell>
-                  <Table.Cell className="px-6 py-4">{item.displayTime}</Table.Cell>
-                  <Table.Cell className="px-6 py-4">
-                    <Link to={`/item/${item.id}`}>{item.item}</Link>
-                  </Table.Cell>
-                  <Table.Cell className="px-6 py-4">
-                    {item.imageUrls && item.imageUrls[0] && (
-                      <img
-                        src={item.imageUrls?.[0] || "default-image.png"}
-                        alt={item.item}
-                        className="w-24 h-auto"
-                        onError={(e) => {
-                          e.target.onError = null;
-                          e.target.src = "default-image.png";
-                        }}
-                      />
-                    )}
-                  </Table.Cell>
-                  <Table.Cell className="px-6 py-4">{item.description}</Table.Cell>
-                  <Table.Cell className="px-6 py-4">{item.department}</Table.Cell>
-                  <Table.Cell className="px-6 py-4">{item.location}</Table.Cell>
-                  <Table.Cell className="px-6 py-4">{item.category}</Table.Cell>
-                </Table.Row>
-              ))}
-            </Table.Body>
-          </Table>
-        </div>
       </div>
     </div>
     

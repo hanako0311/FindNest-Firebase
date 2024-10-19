@@ -1,9 +1,9 @@
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 
-export const generateReport = (items, historicalItems) => {
+export const generateReport = (items) => {
   try {
-    const combinedItems = [...items, ...historicalItems];
+    const combinedItems = [...items];
 
     const data = combinedItems.map((item) => ({
       Item: item.item,
