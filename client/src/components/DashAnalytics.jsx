@@ -65,7 +65,7 @@ export default function DashAnalytics() {
         if (item.status === "Claimed" && item.claimedDate) {
           const claimedDate = new Date(item.claimedDate);
           const daysAgoClaimed = Math.floor(
-            (now - validClaimedDate) / (1000 * 60 * 60 * 24)
+            (now - claimedDate) / (1000 * 60 * 60 * 24)
           );
           if (daysAgoClaimed < 7) {
             claimedCounts[daysAgoClaimed]++;
@@ -93,17 +93,21 @@ export default function DashAnalytics() {
         });
 
         // Add claimed items with a valid date
-        if (item.status === "Claimed" && validClaimedDate) {
+        if (item.status === "Claimed" && item.claimedDate) {
           modifiedItems.push({
             ...item,
             key: `${item.id}-Claimed`,
             action: "Claimed",
-            displayDate: validClaimedDate.toLocaleDateString(),
-            displayTime: validClaimedDate.toLocaleTimeString([], {
+            displayDate: new Date(
+              item.claimedDate || item.updatedAt
+            ).toLocaleDateString(),
+            displayTime: new Date(
+              item.claimedDate || item.updatedAt
+            ).toLocaleTimeString([], {
               hour: "2-digit",
               minute: "2-digit",
             }),
-            sortDate: validClaimedDate,
+            sortDate: new Date(item.claimedDate),
           });
         }
       });
@@ -568,76 +572,6 @@ export default function DashAnalytics() {
           onApplyFilters={applyFilters} 
           clearFilters={clearFilters}
         />
-      </div>
-      <br></br>
-      <div>
-        <div>
-          <h1 className="text-3xl font-bold text-gray-700 dark:text-gray-300 mb-4">
-            Deleted Items
-          </h1>
-          <Table
-            hoverable
-            className="min-w-full text-sm text-left text-gray-500 dark:text-gray-400"
-          >
-            <Table.Head>
-              <Table.HeadCell>Action</Table.HeadCell>
-              <Table.HeadCell>Date</Table.HeadCell>
-              <Table.HeadCell>Time</Table.HeadCell>
-              <Table.HeadCell>Item Name</Table.HeadCell>
-              <Table.HeadCell>Image</Table.HeadCell>
-              <Table.HeadCell>Description</Table.HeadCell>
-              <Table.HeadCell>Department Surrendered</Table.HeadCell>
-              <Table.HeadCell>Location</Table.HeadCell>
-              <Table.HeadCell>Category</Table.HeadCell>
-            </Table.Head>
-            <Table.Body className="bg-white divide-y dark:divide-gray-700 dark:bg-gray-800">
-              {historicalItems.map((item, index) => (
-                <Table.Row
-                  key={item.key || index}
-                  className="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-600"
-                >
-                  <Table.Cell className="px-6 py-4">{item.action}</Table.Cell>
-                  <Table.Cell className="px-6 py-4">
-                    {item.displayDate}
-                  </Table.Cell>
-                  <Table.Cell className="px-6 py-4">
-                    {item.displayTime}
-                  </Table.Cell>
-                  <Table.Cell className="px-6 py-4">
-                    <Link to={`/item/${item.id}`}>{item.item}</Link>
-                  </Table.Cell>
-                  <Table.Cell className="px-6 py-4">
-                    {item.imageUrls && item.imageUrls[0] ? (
-                      <img
-                        src={item.imageUrls[0]}
-                        alt={item.item}
-                        className="w-12 h-12 rounded-md object-cover object-center"
-                        onError={(e) => {
-                          e.target.onError = null; // Prevents looping
-                          e.target.src = "/default-image.png"; // Specify your default image URL here
-                        }}
-                      />
-                    ) : (
-                      <img
-                        src="/default-image.png" // Specify your default image URL here
-                        alt="Default"
-                        className="w-12 h-12 rounded-md object-cover object-center"
-                      />
-                    )}
-                  </Table.Cell>
-                  <Table.Cell className="px-6 py-4">
-                    {item.description}
-                  </Table.Cell>
-                  <Table.Cell className="px-6 py-4">
-                    {item.department}
-                  </Table.Cell>
-                  <Table.Cell className="px-6 py-4">{item.location}</Table.Cell>
-                  <Table.Cell className="px-6 py-4">{item.category}</Table.Cell>
-                </Table.Row>
-              ))}
-            </Table.Body>
-          </Table>
-        </div>
       </div>
     </div>
     
