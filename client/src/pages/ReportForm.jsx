@@ -57,9 +57,19 @@ export default function CreateLostFoundPost() {
           setImageUploadError(
             "Image upload failed: Each image must be less than 2MB."
           );
+
+          // Clear the error message after 3000 milliseconds (3 seconds)
+          setTimeout(() => {
+            setImageUploadError(null);
+          }, 3000);
         });
     } else {
-      setImageUploadError("You can only upload up to 5 images per report.");
+      setImageUploadError(
+        "Please select at least one image, but no more than five, to continue."
+      );
+      setTimeout(() => {
+        setImageUploadError(null);
+      }, 3000);
     }
     setFiles([]); // Clear files after upload
     setKey((prevKey) => prevKey + 1); // Increment key to force re-render of file input
@@ -87,6 +97,9 @@ export default function CreateLostFoundPost() {
             })
             .catch((error) => {
               console.error("Failed to get download URL:", error);
+              setTimeout(() => {
+                setImageUploadError(null);
+              }, 3000);
               reject(error);
             });
         }
@@ -118,12 +131,27 @@ export default function CreateLostFoundPost() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Ensure there is at least one image before submitting
+    if (formData.imageUrls.length === 0) {
+      setReportSubmitError(
+        "At least one image is required to submit the form."
+      );
+
+      // Clear the error message after 3000 milliseconds (3 seconds)
+      setTimeout(() => {
+        setReportSubmitError(null);
+      }, 3000);
+
+      return; // Stop the form submission
+    }
+
     try {
       // Ensure all images are uploaded before submission
       if (files.length > 0) {
         handleImageSubmit();
       }
-      
+
       const res = await fetch("/api/items/save", {
         method: "POST",
         headers: {
@@ -131,18 +159,18 @@ export default function CreateLostFoundPost() {
         },
         body: JSON.stringify(formData), // Send the formData including imageUrls
       });
-  
+
       const data = await res.json();
       if (!res.ok) {
         setReportSubmitError(data.message);
         return;
       }
-  
+
       setReportSuccess("Item reported successfully!");
       setReportSubmitError(null);
-  
-      setTimeout(() => navigate("/dashboard?tab=found-items"), 3000); 
-  
+
+      setTimeout(() => navigate("/dashboard?tab=found-items"), 3000);
+
       // Reset the form
       setFormData({
         item: "",
@@ -151,16 +179,20 @@ export default function CreateLostFoundPost() {
         description: "",
         category: "",
         imageUrls: [],
-        department: "", 
+        department: "",
       });
-      setFiles([]); 
+      setFiles([]);
       setKey((prevKey) => prevKey + 1);
     } catch (error) {
       setReportSubmitError("Something went wrong");
       setReportSuccess(null);
+
+      // Clear the error message after 3000 milliseconds (3 seconds)
+      setTimeout(() => {
+        setReportSubmitError(null);
+      }, 3000);
     }
   };
-  
 
   const handleCapture = useCallback(() => {
     const imageSrc = webcamRef.current.getScreenshot();
