@@ -4,6 +4,7 @@ import findnest.model.Items;
 import findnest.service.ItemService;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -72,6 +73,25 @@ public class ItemController {
     @PatchMapping("/{id}")
     public Items patchItem(@PathVariable String id, @RequestBody Map<String, Object> updates) {
         return itemService.patchItem(id, updates);
+    }
+
+    @PatchMapping("/{id}/turnover")
+    public ResponseEntity<Items> updateTurnoverDetails(
+        @PathVariable String id,
+        @RequestBody Map<String, String> updates) {
+
+        String turnoverDate = updates.get("turnoverDate");
+        String turnoverPerson = updates.get("turnoverPerson");
+        String department = updates.get("department");
+
+        // Ensure that the service method exists
+        Items updatedItem = itemService.updateTurnoverDetails(id, turnoverDate, turnoverPerson, department);
+
+        if (updatedItem != null) {
+            return ResponseEntity.ok(updatedItem);
+        } else {
+            return ResponseEntity.notFound().build();
+        }
     }
 
 }

@@ -98,35 +98,52 @@ public class ItemServiceImpl implements ItemService {
     }
 
     @Override
-    public Items updateItem(String id, Items item) {
-        CompletableFuture<Items> future = new CompletableFuture<>();
+public Items updateItem(String id, Items updatedItem) {
+    CompletableFuture<Items> future = new CompletableFuture<>();
 
-        dbRef.child(id).addListenerForSingleValueEvent(new ValueEventListener() {
-            @Override
-            public void onDataChange(DataSnapshot snapshot) {
-                if (snapshot.exists()) {
-                    item.setId(id);
-                    item.setUpdatedAt(Instant.now().toString());
-                    dbRef.child(id).setValueAsync(item);
-                    future.complete(item);
+    dbRef.child(id).addListenerForSingleValueEvent(new ValueEventListener() {
+        @Override
+        public void onDataChange(DataSnapshot snapshot) {
+            if (snapshot.exists()) {
+                Items existingItem = snapshot.getValue(Items.class);
+                if (existingItem != null) {
+                    // Preserve the turnover fields if they are not being updated
+                    if (updatedItem.getTurnoverDate() == null) {
+                        updatedItem.setTurnoverDate(existingItem.getTurnoverDate());
+                    }
+                    if (updatedItem.getTurnoverPerson() == null) {
+                        updatedItem.setTurnoverPerson(existingItem.getTurnoverPerson());
+                    }
+
+                    // Set the ID and updated timestamp
+                    updatedItem.setId(id);
+                    updatedItem.setUpdatedAt(Instant.now().toString());
+
+                    // Save the updated item
+                    dbRef.child(id).setValueAsync(updatedItem);
+                    future.complete(updatedItem);
                 } else {
                     future.complete(null);
                 }
+            } else {
+                future.complete(null);
             }
-
-            @Override
-            public void onCancelled(DatabaseError error) {
-                future.completeExceptionally(error.toException());
-            }
-        });
-
-        try {
-            return future.get();
-        } catch (Exception e) {
-            e.printStackTrace();
-            return null;
         }
+
+        @Override
+        public void onCancelled(DatabaseError error) {
+            future.completeExceptionally(error.toException());
+        }
+    });
+
+    try {
+        return future.get();
+    } catch (Exception e) {
+        e.printStackTrace();
+        return null;
     }
+}
+
 
     @Override
     public void deleteItem(String id) {
@@ -156,7 +173,7 @@ public class ItemServiceImpl implements ItemService {
         historyDbRef.child(historyId).setValueAsync(item);
     }
 
-      @Override
+    @Override
     public List<Items> getAllItemsFromHistory() {
         CompletableFuture<List<Items>> future = new CompletableFuture<>();
         historyDbRef.addListenerForSingleValueEvent(new ValueEventListener() {
@@ -223,7 +240,7 @@ public class ItemServiceImpl implements ItemService {
                 itemCounts.setTotalCount(snapshot.getChildrenCount());
                 long availableCount = 0;
                 long claimedCount = 0;
-    
+
                 for (DataSnapshot childSnapshot : snapshot.getChildren()) {
                     String status = childSnapshot.child("status").getValue(String.class);
                     if ("Available".equalsIgnoreCase(status)) {
@@ -232,18 +249,18 @@ public class ItemServiceImpl implements ItemService {
                         claimedCount++;
                     }
                 }
-    
+
                 itemCounts.setAvailableCount(availableCount);
                 itemCounts.setClaimedCount(claimedCount);
                 future.complete(itemCounts);
             }
-    
+
             @Override
             public void onCancelled(DatabaseError error) {
                 future.completeExceptionally(error.toException());
             }
         });
-    
+
         try {
             return future.get();
         } catch (Exception e) {
@@ -251,7 +268,7 @@ public class ItemServiceImpl implements ItemService {
             return new Items(); 
         }
     }
-    
+
     @Override
     public Items patchItem(String id, Map<String, Object> updates) {
         CompletableFuture<Items> future = new CompletableFuture<>();
@@ -278,7 +295,7 @@ public class ItemServiceImpl implements ItemService {
                                     break;
                             }
                         });
-    
+
                         item.setUpdatedAt(Instant.now().toString());
                         dbRef.child(id).setValueAsync(item);
                         future.complete(item);
@@ -304,6 +321,45 @@ public class ItemServiceImpl implements ItemService {
         }
     }
 
+    // Corrected placement of updateTurnoverDetails method
+    public Items updateTurnoverDetails(String id, String turnoverDate, String turnoverPerson, String department) {
+        CompletableFuture<Items> future = new CompletableFuture<>();
+        dbRef.child(id).addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot snapshot) {
+                if (snapshot.exists()) {
+                    Items item = snapshot.getValue(Items.class);
+                    if (item != null) {
+                        // Update the turnoverDate, turnoverPerson, and department
+                        item.setTurnoverDate(turnoverDate);
+                        item.setTurnoverPerson(turnoverPerson);
+                        item.setDepartment(department);
+                        
+                        // Set the updated timestamp
+                        item.setUpdatedAt(Instant.now().toString());
 
+                        // Save the updated item back to the database
+                        dbRef.child(id).setValueAsync(item);
+                        future.complete(item);
+                    } else {
+                        future.complete(null);
+                    }
+                } else {
+                    future.complete(null);
+                }
+            }
 
+            @Override
+            public void onCancelled(DatabaseError error) {
+                future.completeExceptionally(error.toException());
+            }
+        });
+
+        try {
+            return future.get();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
 }

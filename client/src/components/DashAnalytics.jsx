@@ -48,123 +48,166 @@ export default function DashAnalytics() {
       const foundCounts = Array(7).fill(0);
       const claimedCounts = Array(7).fill(0);
 
-      const recentFound = [];
-      const recentClaimed = [];
+      let recentFound = [];
+      let recentClaimed = [];
 
       fetchedItems.forEach((item) => {
-        const createdAt = new Date(item.createdAt);
-        const daysAgoFound = Math.floor(
-          (now - createdAt) / (1000 * 60 * 60 * 24)
-        );
-        if (daysAgoFound < 7) {
-          foundCounts[daysAgoFound]++;
-          if (recentFound.length < 5) {
-            recentFound.push(item);
+        // Check for valid date fields and convert them if they exist
+        const dateFound =
+          item.dateFound && !isNaN(Date.parse(item.dateFound))
+            ? new Date(item.dateFound)
+            : null;
+        const createdAt =
+          item.createdAt && !isNaN(Date.parse(item.createdAt))
+            ? new Date(item.createdAt)
+            : null;
+        const claimedDate =
+          item.claimedDate && !isNaN(Date.parse(item.claimedDate))
+            ? new Date(item.claimedDate)
+            : null;
+
+        // Use createdAt as a fallback if dateFound is unavailable
+        const validFoundDate = dateFound || createdAt;
+        const validClaimedDate = claimedDate;
+
+        // Calculate days ago for found items
+        if (validFoundDate) {
+          const daysAgoFound = Math.floor(
+            (now - validFoundDate) / (1000 * 60 * 60 * 24)
+          );
+          if (daysAgoFound < 7 && item.status === "Available") {
+            foundCounts[daysAgoFound]++;
+            recentFound.push(item); // Add to recent found
           }
         }
 
-        if (item.status === "Claimed" && item.claimedDate) {
-          const claimedDate = new Date(item.claimedDate);
+        // Calculate days ago for claimed items
+        if (item.status === "Claimed" && validClaimedDate) {
           const daysAgoClaimed = Math.floor(
-            (now - claimedDate) / (1000 * 60 * 60 * 24)
+            (now - validClaimedDate) / (1000 * 60 * 60 * 24)
           );
           if (daysAgoClaimed < 7) {
             claimedCounts[daysAgoClaimed]++;
-            if (recentClaimed.length < 5) {
-              recentClaimed.push(item);
-            }
+            recentClaimed.push(item); // Add to recent claimed
           }
         }
 
-        modifiedItems.push({
-          ...item,
-          key: `${item.id}-Found`,
-          action: "Found",
-          displayDate: new Date(
-            item.createdAt || item.updatedAt
-          ).toLocaleDateString(),
-          displayTime: new Date(
-            item.createdAt || item.updatedAt
-          ).toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
-          sortDate: new Date(item.createdAt),
-        });
+        // Add found items with a valid date
+        if (validFoundDate) {
+          modifiedItems.push({
+            ...item,
+            key: `${item.id}-Found`,
+            action: "Found",
+            displayDate: validFoundDate.toLocaleDateString(),
+            displayTime: validFoundDate.toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+            sortDate: validFoundDate,
+          });
+        } else {
+          console.warn(`Item with ID ${item.id} has no valid date.`);
+        }
 
-        if (item.status === "Claimed" && item.claimedDate) {
+        // Add claimed items with a valid date
+        if (item.status === "Claimed" && validClaimedDate) {
           modifiedItems.push({
             ...item,
             key: `${item.id}-Claimed`,
             action: "Claimed",
-            displayDate: new Date(
-              item.claimedDate || item.updatedAt
-            ).toLocaleDateString(),
-            displayTime: new Date(
-              item.claimedDate || item.updatedAt
-            ).toLocaleTimeString([], {
+            displayDate: validClaimedDate.toLocaleDateString(),
+            displayTime: validClaimedDate.toLocaleTimeString([], {
               hour: "2-digit",
               minute: "2-digit",
             }),
-            sortDate: new Date(item.claimedDate),
+            sortDate: validClaimedDate,
           });
         }
       });
 
+      // Sort recent found items by dateFound (most recent first)
+      recentFound = recentFound
+        .sort(
+          (a, b) =>
+            new Date(b.dateFound || b.createdAt) -
+            new Date(a.dateFound || a.createdAt)
+        )
+        .slice(0, 5); // Show top 5 found items
+
+      // Sort recent claimed items by claimedDate (most recent first)
+      recentClaimed = recentClaimed
+        .sort((a, b) => new Date(b.claimedDate) - new Date(a.claimedDate))
+        .slice(0, 5); // Show top 5 claimed items
+
+      // Fetch Historical (Deleted) Items and Merge
+      const fetchHistoricalItems = async () => {
+        const res = await fetch(`/api/items/history`);
+        const fetchedHistoricalItems = await res.json();
+
+        if (Array.isArray(fetchedHistoricalItems)) {
+          fetchedHistoricalItems.forEach((item) => {
+            const historyDate = new Date(item.updatedAt || item.createdAt);
+            modifiedItems.push({
+              ...item,
+              action: "Deleted",
+              displayDate: historyDate.toLocaleDateString(),
+              displayTime: historyDate.toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              }),
+              sortDate: historyDate,
+            });
+          });
+        }
+      };
+
+      await fetchHistoricalItems();
+
       // Apply filters
-      // Apply action filter
       if (filters.action && filters.action.length > 0) {
         modifiedItems = modifiedItems.filter((item) =>
           filters.action.includes(item.action)
         );
       }
 
-      //Apply name filter
+      // Apply name filter
       if (filters.name) {
-        // Split the input by commas and trim spaces
         const queries = filters.name
           .split(",")
           .map((query) => query.trim().toLowerCase());
 
-        // Check if any of the queries match either the item name or the category
         modifiedItems = modifiedItems.filter((item) =>
           queries.some(
             (query) =>
               item.item.toLowerCase().includes(query) || // Matches item name
               item.category.toLowerCase().includes(query) || // Matches category
-              item.location.toLowerCase().includes(query) || //Matches location
+              item.location.toLowerCase().includes(query) || // Matches location
               item.department.toLowerCase().includes(query)
           )
         );
       }
 
-      //Apply Date Filter
       // Apply date filter
       if (filters.dateRange && filters.dateRange.length === 2) {
         const [startDate, endDate] = filters.dateRange;
-
-        // Convert startDate and endDate to Date objects for comparison
         const start = startDate ? new Date(startDate) : null;
         const end = endDate ? new Date(endDate) : null;
 
         modifiedItems = modifiedItems.filter((item) => {
-          // Convert displayDate (string) back to a Date object for comparison
-          const itemDate = new Date(item.displayDate); // Convert displayDate (e.g., "09/21/2023") to a Date object
-
-          // Check if itemDate (parsed from displayDate) is within the range
+          const itemDate = new Date(item.displayDate);
           return (!start || itemDate >= start) && (!end || itemDate <= end);
         });
       }
 
+      // Sort all items by date and update state
       setItems(modifiedItems.sort((a, b) => b.sortDate - a.sortDate));
       setItemsFoundCount(foundCounts.reverse());
       setItemsClaimedCount(claimedCounts.reverse());
       setTotalItemsReported(fetchedItems.length);
       setItemsClaimed(getCount(fetchedItems, "Claimed"));
       setItemsPending(getCount(fetchedItems, "Available"));
-      setRecentFoundItems(recentFound);
-      setRecentClaimedItems(recentClaimed);
-      await fetchHistoricalItems(filters);
+      setRecentFoundItems(recentFound); // Set the sorted recent found items
+      setRecentClaimedItems(recentClaimed); // Set the sorted recent claimed items
     } catch (error) {
       console.error("Failed to fetch items:", error);
     }
@@ -181,12 +224,16 @@ export default function DashAnalytics() {
         modifiedItems = fetchedHistoricalItems.map((item) => ({
           ...item,
           action: "Deleted",
-          displayDate: new Date(item.createdAt).toLocaleDateString(),
-          displayTime: new Date(item.createdAt).toLocaleTimeString([], {
+          displayDate: new Date(
+            item.updatedAt || item.createdAt
+          ).toLocaleDateString(),
+          displayTime: new Date(
+            item.updatedAt || item.createdAt
+          ).toLocaleTimeString([], {
             hour: "2-digit",
             minute: "2-digit",
           }),
-          sortDate: new Date(item.createdAt),
+          sortDate: new Date(item.updatedAt || createdAt),
         }));
       } else if (fetchedHistoricalItems) {
         modifiedItems = [
@@ -194,15 +241,17 @@ export default function DashAnalytics() {
             ...fetchedHistoricalItems,
             action: "Deleted",
             displayDate: new Date(
-              fetchedHistoricalItems.createdAt
+              fetchHistoricalItems.updatedAt || fetchedHistoricalItems.createdAt
             ).toLocaleDateString(),
             displayTime: new Date(
-              fetchedHistoricalItems.createdAt
+              fetchHistoricalItems.updatedAt || fetchedHistoricalItems.createdAt
             ).toLocaleTimeString([], {
               hour: "2-digit",
               minute: "2-digit",
             }),
-            sortDate: new Date(fetchedHistoricalItems.createdAt),
+            sortDate: new Date(
+              fetchedHistoricalItems.updatedAt || fetchHistoricalItems.createdAt
+            ),
           },
         ];
       } else {
@@ -298,16 +347,28 @@ export default function DashAnalytics() {
 
   const fetchUsersCount = async () => {
     try {
-      const res = await fetch("/api/users/count");
+      const res = await fetch("/api/users");
 
       if (res.ok) {
-        const data = await res.text();
-        const totalUsers = parseInt(data, 10);
+        const data = await res.json();
 
-        console.log("Fetched Users Data:", totalUsers);
+        // For admin, filter the users based on the current user's department
+        let filteredUsers = [];
+        if (currentUser.role === "admin") {
+          filteredUsers = data.filter(
+            (user) =>
+              user.department === currentUser.department &&
+              user.role === "staff"
+          );
+        } else if (currentUser.role === "superAdmin") {
+          // SuperAdmin can see all users
+          filteredUsers = data;
+        }
+
+        const totalUsers = filteredUsers.length;
+        console.log("Filtered Users for Admin or SuperAdmin:", totalUsers);
 
         setTotalUsers(totalUsers);
-        console.log("Total Users:", totalUsers);
       } else {
         console.error("Failed to fetch users, status:", res.status);
       }
@@ -551,7 +612,7 @@ export default function DashAnalytics() {
           hoverable
           className="min-w-full text-sm text-left text-gray-500 dark:text-gray-400"
         >
-          <Table.Head className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+          <Table.Head>
             <Table.HeadCell>
               {filters.action && filters.action.length > 0
                 ? filters.action.join("/ ") // Join multiple actions with commas
@@ -593,7 +654,7 @@ export default function DashAnalytics() {
             <Table.HeadCell>Category</Table.HeadCell>
           </Table.Head>
           <Table.Body className="bg-white divide-y dark:divide-gray-700 dark:bg-gray-800">
-            {[...items, ...historicalItems].map((item, index) => (
+            {[...items /*...historicalItems*/].map((item, index) => (
               <Table.Row
                 key={item.key || index}
                 className="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-600"
@@ -609,15 +670,21 @@ export default function DashAnalytics() {
                   <Link to={`/item/${item.id}`}>{item.item}</Link>
                 </Table.Cell>
                 <Table.Cell className="px-6 py-4">
-                  {item.imageUrls && item.imageUrls[0] && (
+                  {item.imageUrls && item.imageUrls[0] ? (
                     <img
-                      src={item.imageUrls?.[0] || "default-image.png"}
+                      src={item.imageUrls[0]}
                       alt={item.item}
-                      className="w-24 h-12"
+                      className="w-12 h-12 rounded-md object-cover object-center"
                       onError={(e) => {
-                        e.target.onError = null;
-                        e.target.src = "default-image.png";
+                        e.target.onError = null; // Prevents looping
+                        e.target.src = "/default-image.png"; // Specify your default image URL here
                       }}
+                    />
+                  ) : (
+                    <img
+                      src="/default-image.png" // Specify your default image URL here
+                      alt="Default"
+                      className="w-12 h-12 rounded-md object-cover object-center"
                     />
                   )}
                 </Table.Cell>
@@ -637,6 +704,76 @@ export default function DashAnalytics() {
           onApplyFilters={applyFilters} // Apply the filters when submitted
           clearFilters={clearFilters}
         />
+      </div>
+      <br></br>
+      <div>
+        <div>
+          <h1 className="text-3xl font-bold text-gray-700 dark:text-gray-300 mb-4">
+            Deleted Items
+          </h1>
+          <Table
+            hoverable
+            className="min-w-full text-sm text-left text-gray-500 dark:text-gray-400"
+          >
+            <Table.Head>
+              <Table.HeadCell>Action</Table.HeadCell>
+              <Table.HeadCell>Date</Table.HeadCell>
+              <Table.HeadCell>Time</Table.HeadCell>
+              <Table.HeadCell>Item Name</Table.HeadCell>
+              <Table.HeadCell>Image</Table.HeadCell>
+              <Table.HeadCell>Description</Table.HeadCell>
+              <Table.HeadCell>Department Surrendered</Table.HeadCell>
+              <Table.HeadCell>Location</Table.HeadCell>
+              <Table.HeadCell>Category</Table.HeadCell>
+            </Table.Head>
+            <Table.Body className="bg-white divide-y dark:divide-gray-700 dark:bg-gray-800">
+              {historicalItems.map((item, index) => (
+                <Table.Row
+                  key={item.key || index}
+                  className="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-600"
+                >
+                  <Table.Cell className="px-6 py-4">{item.action}</Table.Cell>
+                  <Table.Cell className="px-6 py-4">
+                    {item.displayDate}
+                  </Table.Cell>
+                  <Table.Cell className="px-6 py-4">
+                    {item.displayTime}
+                  </Table.Cell>
+                  <Table.Cell className="px-6 py-4">
+                    <Link to={`/item/${item.id}`}>{item.item}</Link>
+                  </Table.Cell>
+                  <Table.Cell className="px-6 py-4">
+                    {item.imageUrls && item.imageUrls[0] ? (
+                      <img
+                        src={item.imageUrls[0]}
+                        alt={item.item}
+                        className="w-12 h-12 rounded-md object-cover object-center"
+                        onError={(e) => {
+                          e.target.onError = null; // Prevents looping
+                          e.target.src = "/default-image.png"; // Specify your default image URL here
+                        }}
+                      />
+                    ) : (
+                      <img
+                        src="/default-image.png" // Specify your default image URL here
+                        alt="Default"
+                        className="w-12 h-12 rounded-md object-cover object-center"
+                      />
+                    )}
+                  </Table.Cell>
+                  <Table.Cell className="px-6 py-4">
+                    {item.description}
+                  </Table.Cell>
+                  <Table.Cell className="px-6 py-4">
+                    {item.department}
+                  </Table.Cell>
+                  <Table.Cell className="px-6 py-4">{item.location}</Table.Cell>
+                  <Table.Cell className="px-6 py-4">{item.category}</Table.Cell>
+                </Table.Row>
+              ))}
+            </Table.Body>
+          </Table>
+        </div>
       </div>
     </div>
   );

@@ -1,17 +1,23 @@
-import React, { useState, useEffect } from 'react';
-import { FaEye, FaEyeSlash } from 'react-icons/fa';
-import { Modal, TextInput, Button } from 'flowbite-react';
+import React, { useState, useEffect } from "react";
+import { FaEye, FaEyeSlash } from "react-icons/fa";
+import { Modal, TextInput, Button } from "flowbite-react";
 
-
-const UserModal = ({ show, onClose, user, onSave, departments, currentUser }) => {
+const UserModal = ({
+  show,
+  onClose,
+  user,
+  onSave,
+  departments,
+  currentUser,
+}) => {
   const [localUser, setLocalUser] = useState({
     firstName: "",
     middleName: "",
     lastName: "",
     username: "",
     email: "",
-    department: "",
-    role: "staff",
+    department: currentUser.role === "admin" ? currentUser.department : "", // Auto-set department for admin
+    role: currentUser.role === "admin" ? "staff" : "staff", // Admin can only create staff
     password: "",
   });
   const [showPassword, setShowPassword] = useState(false);
@@ -28,8 +34,8 @@ const UserModal = ({ show, onClose, user, onSave, departments, currentUser }) =>
         lastName: "",
         username: "",
         email: "",
-        department: "",
-        role: "staff",
+        department: currentUser.role === "admin" ? currentUser.department : "",
+        role: currentUser.role === "admin" ? "staff" : "staff",
         password: "",
       });
     }
@@ -51,11 +57,40 @@ const UserModal = ({ show, onClose, user, onSave, departments, currentUser }) =>
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const validationError = validateRolePermissions();
-    if (validationError) {
-      setErrorMessage(validationError);
+
+    // If the current user is an admin, ensure the department stays the same
+    if (currentUser.role === "admin") {
+      localUser.department = currentUser.department; // Enforce the admin's department for staff
+    }
+
+    const { firstName, lastName, username, email, department, password } =
+      localUser;
+
+    // Required fields for both adding and updating
+    if (!firstName || !lastName || !username || !email || !department) {
+      setErrorMessage("All fields are required except password for updates!");
       return;
     }
+
+    // If it's a new user (i.e., no id), require password
+    if (!localUser.id && !password) {
+      setErrorMessage("Password is required for new users!");
+      return;
+    }
+
+    // Validate role permissions using the existing function
+    const roleValidationError = validateRolePermissions();
+    if (roleValidationError) {
+      setErrorMessage(roleValidationError);
+      // Automatically clear the error message after 5 seconds
+      setTimeout(() => {
+        setErrorMessage("");
+      }, 5000);
+
+      return;
+    }
+
+    // Proceed with saving the user (password will be included only if provided)
     onSave(localUser);
   };
 
@@ -72,7 +107,6 @@ const UserModal = ({ show, onClose, user, onSave, departments, currentUser }) =>
     return null;
   };
 
-
   return (
     <Modal show={show} onClose={onClose} size="2xl">
       <Modal.Header>{user ? "Edit User" : "Add New User"}</Modal.Header>
@@ -80,7 +114,10 @@ const UserModal = ({ show, onClose, user, onSave, departments, currentUser }) =>
         <form onSubmit={handleSubmit}>
           <div className="grid grid-cols-6 gap-6">
             <div className="col-span-6 sm:col-span-3">
-              <label htmlFor="firstName" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
+              <label
+                htmlFor="firstName"
+                className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+              >
                 First Name
               </label>
               <TextInput
@@ -92,7 +129,10 @@ const UserModal = ({ show, onClose, user, onSave, departments, currentUser }) =>
               />
             </div>
             <div className="col-span-6 sm:col-span-3">
-              <label htmlFor="middleName" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
+              <label
+                htmlFor="middleName"
+                className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+              >
                 Middle Name
               </label>
               <TextInput
@@ -104,7 +144,10 @@ const UserModal = ({ show, onClose, user, onSave, departments, currentUser }) =>
               />
             </div>
             <div className="col-span-6 sm:col-span-3">
-              <label htmlFor="lastName" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
+              <label
+                htmlFor="lastName"
+                className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+              >
                 Last Name
               </label>
               <TextInput
@@ -116,7 +159,10 @@ const UserModal = ({ show, onClose, user, onSave, departments, currentUser }) =>
               />
             </div>
             <div className="col-span-6 sm:col-span-3">
-              <label htmlFor="username" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
+              <label
+                htmlFor="username"
+                className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+              >
                 Username
               </label>
               <TextInput
@@ -128,7 +174,10 @@ const UserModal = ({ show, onClose, user, onSave, departments, currentUser }) =>
               />
             </div>
             <div className="col-span-6 sm:col-span-3">
-              <label htmlFor="email" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
+              <label
+                htmlFor="email"
+                className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+              >
                 Email
               </label>
               <TextInput
@@ -140,37 +189,58 @@ const UserModal = ({ show, onClose, user, onSave, departments, currentUser }) =>
               />
             </div>
             <div className="col-span-6 sm:col-span-3">
-              <label htmlFor="department" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
+              <label
+                htmlFor="department"
+                className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+              >
                 Department
               </label>
-              <div className="flex space-x-4">
-                {departments.map((dept) => (
-                  <label key={dept} className="flex items-center">
-                    <input
-                      type="radio"
-                      id="department"
-                      name="department"
-                      value={dept}
-                      checked={localUser.department === dept}
-                      onChange={handleRadioChange}
-                      className="form-radio"
-                    />
-                    <span className="ml-2">{dept}</span>
-                  </label>
-                ))}
-              </div>
+              {currentUser.role === "superAdmin" ? (
+                // SuperAdmin can edit the department
+                <div className="flex space-x-4">
+                  {departments.map((dept) => (
+                    <label key={dept} className="flex items-center">
+                      <input
+                        type="radio"
+                        id="department"
+                        name="department"
+                        value={dept}
+                        checked={localUser.department === dept}
+                        onChange={handleChange}
+                        className="form-radio"
+                        required
+                      />
+                      <span className="ml-2">{dept}</span>
+                    </label>
+                  ))}
+                </div>
+              ) : (
+                // Admin can only view the department (read-only)
+                <TextInput
+                  id="department"
+                  type="text"
+                  value={currentUser.department} // Admin's department is automatically set
+                  readOnly
+                  disabled
+                />
+              )}
             </div>
+
             <div className="col-span-6 sm:col-span-3">
-              <label htmlFor="password" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
-                Password
+              <label
+                htmlFor="password"
+                className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+              >
+                Password {localUser.id ? "(Update)" : "(Required)"}
               </label>
               <div className="relative">
                 <TextInput
                   id="password"
-                  type={showPassword ? 'text' : 'password'}
+                  type={showPassword ? "text" : "password"}
                   placeholder="Password"
                   value={localUser.password}
                   onChange={handleChange}
+                  required={!localUser.id} // Required only for new users (when no id exists)
                 />
                 <div className="absolute inset-y-0 right-3 flex items-center text-sm leading-5">
                   <button type="button" onClick={togglePasswordVisibility}>
@@ -179,9 +249,13 @@ const UserModal = ({ show, onClose, user, onSave, departments, currentUser }) =>
                 </div>
               </div>
             </div>
-            {currentUser.role === 'superAdmin' && (
+
+            {currentUser.role === "superAdmin" && (
               <div className="col-span-6 sm:col-span-3">
-                <label htmlFor="role" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
+                <label
+                  htmlFor="role"
+                  className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+                >
                   Role
                 </label>
                 <div className="flex space-x-4">
@@ -191,7 +265,7 @@ const UserModal = ({ show, onClose, user, onSave, departments, currentUser }) =>
                       id="role"
                       name="role"
                       value="admin"
-                      checked={localUser.role === 'admin'}
+                      checked={localUser.role === "admin"}
                       onChange={handleRadioChange}
                       className="form-radio"
                     />
@@ -203,7 +277,7 @@ const UserModal = ({ show, onClose, user, onSave, departments, currentUser }) =>
                       id="role"
                       name="role"
                       value="staff"
-                      checked={localUser.role === 'staff'}
+                      checked={localUser.role === "staff"}
                       onChange={handleRadioChange}
                       className="form-radio"
                     />
@@ -213,10 +287,18 @@ const UserModal = ({ show, onClose, user, onSave, departments, currentUser }) =>
               </div>
             )}
           </div>
-          {errorMessage && <div className="mb-4 text-red-500">{errorMessage}</div>}
-          {successMessage && <div className="mb-4 text-green-500">{successMessage}</div>}
+          {errorMessage && (
+            <div className="mb-4 text-red-500">{errorMessage}</div>
+          )}
+          {successMessage && (
+            <div className="mb-4 text-green-500">{successMessage}</div>
+          )}
           <div className="items-center p-6 border-t border-gray-200 rounded-b dark:border-gray-700">
-            <Button type="submit" gradientDuoTone="pinkToOrange" className="w-full">
+            <Button
+              type="submit"
+              gradientDuoTone="pinkToOrange"
+              className="w-full"
+            >
               Save
             </Button>
           </div>
