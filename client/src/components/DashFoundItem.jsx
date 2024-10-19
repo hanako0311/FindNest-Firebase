@@ -80,7 +80,14 @@ export default function DashFoundItem() {
           item.status.toLowerCase() === "available" // Show available items
       );
 
-      setItems(unclaimedAndAvailableItems.reverse());
+      // Sort items by dateFound in descending order (newest first)
+      const sortedItems = unclaimedAndAvailableItems.sort((a, b) => {
+        const dateA = new Date(a.dateFound);
+        const dateB = new Date(b.dateFound);
+        return dateB - dateA; // Newest first
+      });
+
+      setItems(sortedItems); // Set sorted items
     } catch (error) {
       console.error("Error fetching items:", error);
     }
@@ -261,12 +268,12 @@ export default function DashFoundItem() {
                   className="h-full w-full object-contain object-center"
                   onError={(e) => {
                     e.target.onError = null; // Prevents looping
-                    e.target.src = "default-image.png"; // Specify your default image URL here
+                    e.target.src = "/default-image.png"; // Specify your default image URL here
                   }}
                 />
               ) : (
                 <img
-                  src="default-image.png" // Specify your default image URL here
+                  src="/default-image.png" // Specify your default image URL here
                   alt="Default"
                   className="h-full w-full object-cover object-center"
                 />

@@ -502,7 +502,7 @@ export default function DashCrudItems() {
                       className="w-24 h-32 object-cover object-center rounded-md"
                       onError={(e) => {
                         e.target.onError = null; // Prevents looping
-                        e.target.src = "default-image.png"; // Specify your default image URL here
+                        e.target.src = "/default-image.png";
                       }}
                     />
                   )}

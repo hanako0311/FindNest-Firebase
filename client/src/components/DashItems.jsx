@@ -7,10 +7,12 @@ import {
   HiPencilAlt,
   HiTrash,
   HiOutlineExclamationCircle,
+  HiSwitchHorizontal,
 } from "react-icons/hi";
 import { AiOutlineSearch } from "react-icons/ai";
 import { useNavigate } from "react-router-dom";
 import ItemModal from "../reusable/ItemModal";
+import TurnoverModal from "../reusable/TurnoverModal";
 
 export default function DashItems() {
   const [items, setItems] = useState([]);
@@ -26,6 +28,7 @@ export default function DashItems() {
   const [itemToDelete, setItemToDelete] = useState(null);
   const [isImageModalOpen, setImageModalOpen] = useState(false);
   const [currentImageUrl, setCurrentImageUrl] = useState("");
+  const [isTurnoverModalOpen, setIsTurnoverModalOpen] = useState(false);
 
   const navigate = useNavigate(); // Use navigate to switch views
 
@@ -54,7 +57,6 @@ export default function DashItems() {
     setCurrentImageUrl(imageUrl);
     setImageModalOpen(true);
   };
-
   // Sort and filter logic
   const sortedItems = items
     .filter((item) => {
@@ -85,18 +87,26 @@ export default function DashItems() {
             .toLowerCase()
             .includes(searchTerm))
       );
-    })
-    .sort((a, b) => {
-      // Sorting logic based on the selected tab
-      if (filter === "All Items") {
-        return new Date(b.dateFound) - new Date(a.dateFound); // Sort by recently reported items
-      } else if (filter === "Unclaimed Items") {
-        return new Date(b.dateFound) - new Date(a.dateFound); // Sort by recent unclaimed items
-      } else if (filter === "Claimed Items") {
-        return new Date(b.claimedDate) - new Date(a.claimedDate); // Sort by recently claimed items
-      }
-      return 0;
     });
+
+  // Final sorted items logic
+  const finalSortedItems = (() => {
+    if (filter === "Claimed Items") {
+      // Sort by claimed date for Claimed Items in descending order (most recent to oldest)
+      return sortedItems.sort((a, b) => {
+        if (!a.claimedDate) return 1; // Place items without claimedDate at the end
+        if (!b.claimedDate) return -1; // Place items without claimedDate at the end
+        return new Date(b.claimedDate) - new Date(a.claimedDate); // Sort descending (most recent first)
+      });
+    } else {
+      // For All Items and Unclaimed Items, sort by dateFound in descending order (most recent to oldest)
+      return sortedItems.sort((a, b) => {
+        if (!a.dateFound) return 1; // Place items without dateFound at the end
+        if (!b.dateFound) return -1; // Place items without dateFound at the end
+        return new Date(b.dateFound) - new Date(a.dateFound); // Sort descending (most recent first)
+      });
+    }
+  })();
 
   const handleSave = async (item, id) => {
     try {
@@ -157,6 +167,39 @@ export default function DashItems() {
     }
   };
 
+  const handleTurnoverSave = async (turnoverData) => {
+    try {
+      // PATCH request to update turnover data including department (Office Stored)
+      const response = await fetch(`/api/items/${itemToEdit.id}/turnover`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(turnoverData), // Includes department field
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to save turnover information");
+      }
+
+      const updatedItem = await response.json(); // Get the updated item from the backend
+      console.log("Updated item:", updatedItem); // Debugging log
+
+      // Update the state to reflect the updated department immediately
+      setItems((prevItems) =>
+        prevItems.map((item) =>
+          item.id === updatedItem.id ? updatedItem : item
+        )
+      );
+
+      setSuccessMessage("Turnover information saved successfully.");
+      setIsTurnoverModalOpen(false); // Close the modal after saving
+    } catch (error) {
+      console.error("Error saving turnover data:", error);
+      setErrorMessage("Error saving turnover data.");
+    }
+  };
+
   return (
     <div className="container mx-auto p-3 overflow-x-auto">
       {/* Toast Messages */}
@@ -209,30 +252,33 @@ export default function DashItems() {
       {/* Filter Buttons */}
       <div className="flex mb-4 space-x-2 p-3">
         <Button
-          color={filter === "All Items" ? "blue" : "gray"}
+          color={filter === "All Items" ? "red" : "gray"}
           onClick={() => setFilter("All Items")}
         >
           All Items
         </Button>
         <Button
-          color={filter === "Unclaimed Items" ? "blue" : "gray"}
+          color={filter === "Unclaimed Items" ? "red" : "gray"}
           onClick={() => setFilter("Unclaimed Items")}
         >
           Unclaimed Items
         </Button>
         <Button
-          color={filter === "Claimed Items" ? "blue" : "gray"}
+          color={filter === "Claimed Items" ? "red" : "gray"}
           onClick={() => setFilter("Claimed Items")}
         >
           Claimed Items
         </Button>
 
         <Button
-          color="blue"
+          color="red"
           className="ml-auto"
-          onClick={() => setIsModalOpen(true)}
+          onClick={() => {
+            setItemToEdit(null); // Clear itemToEdit to add a new item
+            setIsModalOpen(true);
+          }}
         >
-          <HiPlus className="w-5 h-5" />
+          <HiPlus className="w-4 h-4" />
         </Button>
       </div>
 
@@ -276,15 +322,23 @@ export default function DashItems() {
               >
                 <Table.Cell className="px-6 py-4">{item.item}</Table.Cell>
                 <Table.Cell className="px-0 py-4">
-                  <img
-                    className="w-24 h-24 rounded-md object-cover object-center"
-                    src={item.imageUrls && item.imageUrls[0]}
-                    alt={item.item}
-                    onError={(e) => {
-                      e.target.onerror = null;
-                      e.target.src = "default-image.png"; // Fallback image URL
-                    }}
-                  />
+                  {item.imageUrls && item.imageUrls[0] ? (
+                    <img
+                      src={item.imageUrls[0]}
+                      alt={item.item}
+                      className="w-24 h-24 rounded-md object-cover object-center"
+                      onError={(e) => {
+                        e.target.onError = null; // Prevents looping
+                        e.target.src = "/default-image.png"; // Specify your default image URL here
+                      }}
+                    />
+                  ) : (
+                    <img
+                      src="/default-image.png" // Specify your default image URL here
+                      alt="Default"
+                      className="w-24 h-24 rounded-md object-cover object-center"
+                    />
+                  )}
                 </Table.Cell>
 
                 <Table.Cell className="px-6 py-4">
@@ -302,7 +356,9 @@ export default function DashItems() {
                     : "-"}
                 </Table.Cell>
 
-                <Table.Cell className="px-6 py-4">{item.department}</Table.Cell>
+                <Table.Cell className="px-6 py-4">
+                  {item.department || "-"}
+                </Table.Cell>
                 <Table.Cell className="px-6 py-4">{item.status}</Table.Cell>
 
                 {filter === "Claimed Items" && (
@@ -373,6 +429,18 @@ export default function DashItems() {
                         >
                           <HiTrash className="w-4 h-4" />
                         </Button>
+                        {/* Add Turnover Button */}
+                        <Button
+                          color="purple"
+                          onClick={() => {
+                            console.log("Editing item:", item); // Add this line to debug
+                            setItemToEdit(item);
+                            // Open turnover modal (we'll create it soon)
+                            setIsTurnoverModalOpen(true);
+                          }}
+                        >
+                          <HiSwitchHorizontal className="w-4 h-4" />
+                        </Button>
                       </div>
                     </Table.Cell>
                   )}
@@ -428,6 +496,14 @@ export default function DashItems() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSave={handleSave}
+        itemToEdit={itemToEdit}
+      />
+
+      {/* Include TurnoverModal */}
+      <TurnoverModal
+        isOpen={isTurnoverModalOpen}
+        onClose={() => setIsTurnoverModalOpen(false)}
+        onSave={handleTurnoverSave}
         itemToEdit={itemToEdit}
       />
     </div>

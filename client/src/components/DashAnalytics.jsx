@@ -46,8 +46,8 @@ export default function DashAnalytics() {
       const foundCounts = Array(7).fill(0);
       const claimedCounts = Array(7).fill(0);
 
-      const recentFound = [];
-      const recentClaimed = [];
+      let recentFound = [];
+      let recentClaimed = [];
 
       fetchedItems.forEach((item) => {
         const createdAt = new Date(item.createdAt);
@@ -61,12 +61,11 @@ export default function DashAnalytics() {
             recentFound.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
           }
         }
-  
 
         if (item.status === "Claimed" && item.claimedDate) {
           const claimedDate = new Date(item.claimedDate);
           const daysAgoClaimed = Math.floor(
-            (now - claimedDate) / (1000 * 60 * 60 * 24)
+            (now - validClaimedDate) / (1000 * 60 * 60 * 24)
           );
           if (daysAgoClaimed < 7) {
             claimedCounts[daysAgoClaimed]++;
@@ -93,21 +92,18 @@ export default function DashAnalytics() {
           sortDate: new Date(item.createdAt || item.dateFound),
         });
 
-        if (item.status === "Claimed" && item.claimedDate) {
+        // Add claimed items with a valid date
+        if (item.status === "Claimed" && validClaimedDate) {
           modifiedItems.push({
             ...item,
             key: `${item.id}-Claimed`,
             action: "Claimed",
-            displayDate: new Date(
-              item.claimedDate || item.updatedAt
-            ).toLocaleDateString(),
-            displayTime: new Date(
-              item.claimedDate || item.updatedAt
-            ).toLocaleTimeString([], {
+            displayDate: validClaimedDate.toLocaleDateString(),
+            displayTime: validClaimedDate.toLocaleTimeString([], {
               hour: "2-digit",
               minute: "2-digit",
             }),
-            sortDate: new Date(item.claimedDate),
+            sortDate: validClaimedDate,
           });
         }
       });
@@ -136,12 +132,11 @@ export default function DashAnalytics() {
       await fetchHistoricalItems();
 
       // Apply filters
-      // Apply action filter
       if (filters.action && filters.action.length > 0) {
         modifiedItems = modifiedItems.filter((item) => filters.action.includes(item.action));
       }
 
-      //Apply name filter
+      // Apply name filter
       if (filters.name) {
         // Split the input by commas and trim spaces
         const queries = filters.name.split(',').map(query => query.trim().toLowerCase());
@@ -157,12 +152,9 @@ export default function DashAnalytics() {
         );
       }
 
-      //Apply Date Filter
       // Apply date filter
       if (filters.dateRange && filters.dateRange.length === 2) {
         const [startDate, endDate] = filters.dateRange;
-
-        // Convert startDate and endDate to Date objects for comparison
         const start = startDate ? new Date(startDate) : null;
         const end = endDate ? new Date(endDate) : null;
         
@@ -175,6 +167,7 @@ export default function DashAnalytics() {
         });
       }
 
+      // Sort all items by date and update state
       setItems(modifiedItems.sort((a, b) => b.sortDate - a.sortDate));
       setItemsFoundCount(foundCounts.reverse());
       setItemsClaimedCount(claimedCounts.reverse());
@@ -541,15 +534,21 @@ export default function DashAnalytics() {
                   <Link to={`/item/${item.id}`}>{item.item}</Link>
                 </Table.Cell>
                 <Table.Cell className="px-6 py-4">
-                  {item.imageUrls && item.imageUrls[0] && (
+                  {item.imageUrls && item.imageUrls[0] ? (
                     <img
-                      src={item.imageUrls?.[0] || "default-image.png"}
+                      src={item.imageUrls[0]}
                       alt={item.item}
-                      className="w-24 h-12"
+                      className="w-12 h-12 rounded-md object-cover object-center"
                       onError={(e) => {
-                        e.target.onError = null;
-                        e.target.src = "default-image.png";
+                        e.target.onError = null; // Prevents looping
+                        e.target.src = "/default-image.png"; // Specify your default image URL here
                       }}
+                    />
+                  ) : (
+                    <img
+                      src="/default-image.png" // Specify your default image URL here
+                      alt="Default"
+                      className="w-12 h-12 rounded-md object-cover object-center"
                     />
                   )}
                 </Table.Cell>
@@ -569,6 +568,76 @@ export default function DashAnalytics() {
           onApplyFilters={applyFilters} 
           clearFilters={clearFilters}
         />
+      </div>
+      <br></br>
+      <div>
+        <div>
+          <h1 className="text-3xl font-bold text-gray-700 dark:text-gray-300 mb-4">
+            Deleted Items
+          </h1>
+          <Table
+            hoverable
+            className="min-w-full text-sm text-left text-gray-500 dark:text-gray-400"
+          >
+            <Table.Head>
+              <Table.HeadCell>Action</Table.HeadCell>
+              <Table.HeadCell>Date</Table.HeadCell>
+              <Table.HeadCell>Time</Table.HeadCell>
+              <Table.HeadCell>Item Name</Table.HeadCell>
+              <Table.HeadCell>Image</Table.HeadCell>
+              <Table.HeadCell>Description</Table.HeadCell>
+              <Table.HeadCell>Department Surrendered</Table.HeadCell>
+              <Table.HeadCell>Location</Table.HeadCell>
+              <Table.HeadCell>Category</Table.HeadCell>
+            </Table.Head>
+            <Table.Body className="bg-white divide-y dark:divide-gray-700 dark:bg-gray-800">
+              {historicalItems.map((item, index) => (
+                <Table.Row
+                  key={item.key || index}
+                  className="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-600"
+                >
+                  <Table.Cell className="px-6 py-4">{item.action}</Table.Cell>
+                  <Table.Cell className="px-6 py-4">
+                    {item.displayDate}
+                  </Table.Cell>
+                  <Table.Cell className="px-6 py-4">
+                    {item.displayTime}
+                  </Table.Cell>
+                  <Table.Cell className="px-6 py-4">
+                    <Link to={`/item/${item.id}`}>{item.item}</Link>
+                  </Table.Cell>
+                  <Table.Cell className="px-6 py-4">
+                    {item.imageUrls && item.imageUrls[0] ? (
+                      <img
+                        src={item.imageUrls[0]}
+                        alt={item.item}
+                        className="w-12 h-12 rounded-md object-cover object-center"
+                        onError={(e) => {
+                          e.target.onError = null; // Prevents looping
+                          e.target.src = "/default-image.png"; // Specify your default image URL here
+                        }}
+                      />
+                    ) : (
+                      <img
+                        src="/default-image.png" // Specify your default image URL here
+                        alt="Default"
+                        className="w-12 h-12 rounded-md object-cover object-center"
+                      />
+                    )}
+                  </Table.Cell>
+                  <Table.Cell className="px-6 py-4">
+                    {item.description}
+                  </Table.Cell>
+                  <Table.Cell className="px-6 py-4">
+                    {item.department}
+                  </Table.Cell>
+                  <Table.Cell className="px-6 py-4">{item.location}</Table.Cell>
+                  <Table.Cell className="px-6 py-4">{item.category}</Table.Cell>
+                </Table.Row>
+              ))}
+            </Table.Body>
+          </Table>
+        </div>
       </div>
     </div>
     
