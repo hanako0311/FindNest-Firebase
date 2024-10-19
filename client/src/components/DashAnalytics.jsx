@@ -50,16 +50,21 @@ export default function DashAnalytics() {
       let recentClaimed = [];
 
       fetchedItems.forEach((item) => {
-        const createdAt = new Date(item.createdAt);
+        const createdAt = new Date(item.dateFound);
         const daysAgoFound = Math.floor(
           (now - createdAt) / (1000 * 60 * 60 * 24)
         );
         if (daysAgoFound < 7) {
           foundCounts[daysAgoFound]++;
-          if (recentFound.length < 5) {
+          // if (recentFound.length < 5) {
             recentFound.push(item);
-            recentFound.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-          }
+          //   recentFound.sort((a, b) => new Date(b.createdAt || b.dateFound) - new Date(a.createdAt || a.dateFound));
+          // }
+        }
+
+        recentFound.sort((a, b) => new Date(b.createdAt || b.dateFound) - new Date(a.createdAt || a.dateFound));
+        if (recentFound.length > 5) {
+          recentFound = recentFound.slice(0, 5);
         }
 
         if (item.status === "Claimed" && item.claimedDate) {
@@ -69,11 +74,16 @@ export default function DashAnalytics() {
           );
           if (daysAgoClaimed < 7) {
             claimedCounts[daysAgoClaimed]++;
-            if (recentClaimed.length < 5) {
+            //if (recentClaimed.length < 5) {
               recentClaimed.push(item);
-              recentClaimed.sort((a, b) => new Date(b.claimedDate) - new Date(a.claimedDate));
-            }
+            //  recentClaimed.sort((a, b) => new Date(b.claimedDate) - new Date(a.claimedDate));
+            //}
           }
+        }
+
+        recentClaimed.sort((a, b) => new Date(b.claimedDate) - new Date(a.claimedDate));
+        if (recentClaimed.length > 5) {
+          recentClaimed = recentClaimed.slice(0, 5);
         }
 
         modifiedItems.push({
@@ -198,8 +208,6 @@ export default function DashAnalytics() {
       }
 
       if (currentUser.role === "admin" || currentUser.role === "superAdmin") {
-        //fetchUsersCount();
-        // fetchItemCount();
         fetchAllUsers();
       }
     }
@@ -396,7 +404,7 @@ export default function DashAnalytics() {
                   </Table.Cell>
                   <Table.Cell>{item.item}</Table.Cell>
                   <Table.Cell>
-                    {new Date(item.createdAt).toLocaleDateString()}
+                    {new Date(item.createdAt || item.dateFound).toLocaleDateString()}
                   </Table.Cell>
                 </Table.Row>
               ))}
@@ -417,7 +425,7 @@ export default function DashAnalytics() {
               <Table.HeadCell>Date</Table.HeadCell>
             </Table.Head>
             <Table.Body className="divide-y">
-              {recentClaimedItems.map((item) => (
+              {(recentClaimedItems || []).map((item) => (
                 <Table.Row
                   key={item.id}
                   className="bg-white dark:border-gray-700 dark:bg-gray-800"
