@@ -15,6 +15,7 @@ import { HiCheck } from "react-icons/hi";
 import { useSelector } from "react-redux";
 
 export default function ClaimForm() {
+  const [imageError, setImageError] = useState("");
   const { itemId } = useParams(); // Retrieve itemId from URL
   const [formData, setFormData] = useState({
     claimantName: "",
@@ -51,6 +52,10 @@ export default function ClaimForm() {
 
   const handleUploadCapturedImage = async (imageSrc) => {
     const blob = await fetch(imageSrc).then((res) => res.blob());
+    if (blob.size > 2097152) {
+      alert("Captured image must be less than 2MB.");
+      return; // Exit the function if the captured image is too large
+    }
     const file = new File([blob], `captured-${Date.now()}.jpg`, {
       type: "image/jpeg",
     });
@@ -64,6 +69,19 @@ export default function ClaimForm() {
   const handleImageChange = async (e) => {
     const file = e.target.files[0];
     if (file) {
+      if (file.size > 2097152) {
+        setImageError("Image must be less than 2MB.");
+        setTimeout(() => {
+          setImageError(""); // Clear the message after 3 seconds
+        }, 3000);
+
+        // Reset the file input
+        if (fileInputRef.current) {
+          fileInputRef.current.value = ""; // This resets the file input
+        }
+
+        return;
+      }
       const url = await storeImage(file);
       setFormData((prev) => ({
         ...prev,
@@ -180,7 +198,12 @@ export default function ClaimForm() {
           maxDate={new Date()}
           className="w-full p-2.5 text-sm text-gray-900 bg-white border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
         />
-        <input type="file" accept="image/*" onChange={handleImageChange} />
+        <input
+          type="file"
+          accept="image/*"
+          onChange={handleImageChange}
+          ref={fileInputRef}
+        />
         <Button onClick={toggleWebcam} gradientDuoTone="purpleToBlue">
           {showWebcam ? "Close Webcam" : "Open Webcam"}
         </Button>
@@ -210,7 +233,11 @@ export default function ClaimForm() {
             </Button>
           </div>
         )}
-        <Button type="submit" gradientDuoTone="cyanToBlue">
+        <Button
+          type="submit"
+          gradientDuoTone="cyanToBlue"
+          disabled={!formData.claimantImage}
+        >
           Confirm
         </Button>
         {showAlert && (
@@ -223,6 +250,11 @@ export default function ClaimForm() {
               <HiCheck className="h-5 w-5 mr-2" />
               Item Claimed Successfully!
             </div>
+          </Alert>
+        )}
+        {imageError && (
+          <Alert color="failure" onClose={() => setImageError("")}>
+            {imageError}
           </Alert>
         )}
       </form>

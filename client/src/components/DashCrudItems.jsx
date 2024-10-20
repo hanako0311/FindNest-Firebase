@@ -119,20 +119,36 @@ export default function DashCrudItems() {
           },
         });
 
-        console.log("Response status:", res.status);
-
         if (!res.ok) {
           throw new Error(`HTTP error! status: ${res.status}`);
         }
 
         const data = await res.json();
-        const availableItems = data.filter(
-          (item) => item.status === "available"
-        );
-        const claimedItems = data.filter((item) => item.status === "claimed");
-        setItems(availableItems);
-        setClaimedItems(claimedItems);
-        setFilteredItems(view === "All Items" ? availableItems : claimedItems);
+
+        // Set all items
+        setItems(data);
+
+        // Filter and sort based on the view
+        if (view === "All Items") {
+          const sortedItems = [...data].sort(
+            (a, b) => new Date(b.dateFound) - new Date(a.dateFound)
+          );
+          setFilteredItems(sortedItems);
+        } else if (view === "Unclaimed Items") {
+          const unclaimedItems = data.filter(
+            (item) => item.status === "available"
+          );
+          const sortedUnclaimedItems = unclaimedItems.sort(
+            (a, b) => new Date(b.dateFound) - new Date(a.dateFound)
+          );
+          setFilteredItems(sortedUnclaimedItems);
+        } else if (view === "Claimed Items") {
+          const claimedItems = data.filter((item) => item.status === "claimed");
+          const sortedClaimedItems = claimedItems.sort(
+            (a, b) => new Date(b.claimedDate) - new Date(a.claimedDate)
+          );
+          setFilteredItems(sortedClaimedItems);
+        }
       } catch (error) {
         console.error("Error fetching items:", error);
       }
@@ -280,7 +296,7 @@ export default function DashCrudItems() {
 
     const updatedItem = { ...itemToEdit };
 
-    console.log('Item being saved:', updatedItem); // added for debugging
+    console.log("Item being saved:", updatedItem); // added for debugging
 
     const token = localStorage.getItem("token");
 
@@ -427,7 +443,8 @@ export default function DashCrudItems() {
           value={view}
           onChange={(e) => setView(e.target.value)}
         >
-          <option value="All Items">Unclaimed Items</option>
+          <option value="All Items">All Items</option>
+          <option value="Unclaimed Items">Unclaimed Items</option>
           <option value="Claimed Items">Claimed Items</option>
         </Select>
 
@@ -482,10 +499,10 @@ export default function DashCrudItems() {
                     <img
                       src={item.imageUrls[0]}
                       alt={item.item}
-                      className="w-24 h-auto"
+                      className="w-24 h-32 object-cover object-center rounded-md"
                       onError={(e) => {
                         e.target.onError = null; // Prevents looping
-                        e.target.src = "default-image.png"; // Specify your default image URL here
+                        e.target.src = "/default-image.png";
                       }}
                     />
                   )}

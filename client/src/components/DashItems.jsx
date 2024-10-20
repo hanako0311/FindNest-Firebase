@@ -7,10 +7,12 @@ import {
   HiPencilAlt,
   HiTrash,
   HiOutlineExclamationCircle,
+  HiSwitchHorizontal,
 } from "react-icons/hi";
 import { AiOutlineSearch } from "react-icons/ai";
 import { useNavigate } from "react-router-dom";
 import ItemModal from "../reusable/ItemModal";
+import TurnoverModal from "../reusable/TurnoverModal";
 
 export default function DashItems() {
   const [items, setItems] = useState([]);
@@ -26,6 +28,7 @@ export default function DashItems() {
   const [itemToDelete, setItemToDelete] = useState(null);
   const [isImageModalOpen, setImageModalOpen] = useState(false);
   const [currentImageUrl, setCurrentImageUrl] = useState("");
+  const [isTurnoverModalOpen, setIsTurnoverModalOpen] = useState(false);
 
   const navigate = useNavigate(); // Use navigate to switch views
 
@@ -54,10 +57,10 @@ export default function DashItems() {
     setCurrentImageUrl(imageUrl);
     setImageModalOpen(true);
   };
-
-  // Filter logic with buttons instead of dropdown
-  const filteredItems = items
+  // Sort and filter logic
+  const sortedItems = items
     .filter((item) => {
+      // Filter items based on the selected tab (All, Unclaimed, Claimed)
       if (filter === "All Items") {
         return true; // Show all items
       }
@@ -65,15 +68,51 @@ export default function DashItems() {
         ? item.status === "Available"
         : item.status === "Claimed";
     })
-    .filter((item) =>
-      item.item.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    .filter((item) => {
+      // Search across item name, description, location, category, and date found
+      const searchTerm = searchQuery.toLowerCase();
+      return (
+        item.item.toLowerCase().includes(searchTerm) ||
+        (item.description &&
+          item.description.toLowerCase().includes(searchTerm)) ||
+        (item.location && item.location.toLowerCase().includes(searchTerm)) ||
+        (item.category && item.category.toLowerCase().includes(searchTerm)) ||
+        (item.dateFound &&
+          new Date(item.dateFound)
+            .toLocaleDateString("en-US", {
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            })
+            .toLowerCase()
+            .includes(searchTerm))
+      );
+    });
+
+  // Final sorted items logic
+  const finalSortedItems = (() => {
+    if (filter === "Claimed Items") {
+      // Sort by claimed date for Claimed Items in descending order (most recent to oldest)
+      return sortedItems.sort((a, b) => {
+        if (!a.claimedDate) return 1; // Place items without claimedDate at the end
+        if (!b.claimedDate) return -1; // Place items without claimedDate at the end
+        return new Date(b.claimedDate) - new Date(a.claimedDate); // Sort descending (most recent first)
+      });
+    } else {
+      // For All Items and Unclaimed Items, sort by dateFound in descending order (most recent to oldest)
+      return sortedItems.sort((a, b) => {
+        if (!a.dateFound) return 1; // Place items without dateFound at the end
+        if (!b.dateFound) return -1; // Place items without dateFound at the end
+        return new Date(b.dateFound) - new Date(a.dateFound); // Sort descending (most recent first)
+      });
+    }
+  })();
 
   const handleSave = async (item, id) => {
     try {
       const url = id ? `/api/items/${id}` : "/api/items/save";
       const method = id ? "PUT" : "POST";
-      console.log('Item being saved:', item);  // Debugging log to check the item data
+      console.log("Item being saved:", item); // Debugging log to check the item data
       const response = await fetch(url, {
         method,
         headers: {
@@ -128,8 +167,41 @@ export default function DashItems() {
     }
   };
 
+  const handleTurnoverSave = async (turnoverData) => {
+    try {
+      // PATCH request to update turnover data including department (Office Stored)
+      const response = await fetch(`/api/items/${itemToEdit.id}/turnover`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(turnoverData), // Includes department field
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to save turnover information");
+      }
+
+      const updatedItem = await response.json(); // Get the updated item from the backend
+      console.log("Updated item:", updatedItem); // Debugging log
+
+      // Update the state to reflect the updated department immediately
+      setItems((prevItems) =>
+        prevItems.map((item) =>
+          item.id === updatedItem.id ? updatedItem : item
+        )
+      );
+
+      setSuccessMessage("Turnover information saved successfully.");
+      setIsTurnoverModalOpen(false); // Close the modal after saving
+    } catch (error) {
+      console.error("Error saving turnover data:", error);
+      setErrorMessage("Error saving turnover data.");
+    }
+  };
+
   return (
-    <div className="container mx-auto p-3 scrollbar scrollbar-track-slate-100 scrollbar-thumb-slate-300 dark:scrollbar-track-slate-700 dark:scrollbar-thumb-slate-500 overflow-x-auto">
+    <div className="container mx-auto p-3 overflow-x-auto">
       {/* Toast Messages */}
       {successMessage && (
         <Toast className="fixed top-4 right-4 z-50">
@@ -163,8 +235,7 @@ export default function DashItems() {
             className="w-48"
           >
             <option value="DashItems">Items View</option>
-            <option value="FoundItems">Found Items View</option>{" "}
-            {/* Option for DashFoundItems */}
+            <option value="FoundItems">Found Items View</option>
           </Select>
 
           <TextInput
@@ -179,36 +250,39 @@ export default function DashItems() {
       </div>
 
       {/* Filter Buttons */}
-      <div className="flex mb-4 space-x-3">
+      <div className="flex mb-4 space-x-2 p-3">
         <Button
-          color={filter === "All Items" ? "blue" : "gray"}
+          color={filter === "All Items" ? "red" : "gray"}
           onClick={() => setFilter("All Items")}
         >
           All Items
         </Button>
         <Button
-          color={filter === "Unclaimed Items" ? "blue" : "gray"}
+          color={filter === "Unclaimed Items" ? "red" : "gray"}
           onClick={() => setFilter("Unclaimed Items")}
         >
           Unclaimed Items
         </Button>
         <Button
-          color={filter === "Claimed Items" ? "blue" : "gray"}
+          color={filter === "Claimed Items" ? "red" : "gray"}
           onClick={() => setFilter("Claimed Items")}
         >
           Claimed Items
         </Button>
 
         <Button
-          color="blue"
+          color="red"
           className="ml-auto"
-          onClick={() => setIsModalOpen(true)}
+          onClick={() => {
+            setItemToEdit(null); // Clear itemToEdit to add a new item
+            setIsModalOpen(true);
+          }}
         >
-          <HiPlus className="w-5 h-5" />
+          <HiPlus className="w-4 h-4" />
         </Button>
       </div>
 
-      <div className="overflow-x-auto">
+      <div className="container mx-auto p-3 scrollbar overflow-x-auto">
         <Table
           hoverable
           className="min-w-full text-sm text-left text-gray-500 dark:text-gray-400"
@@ -222,8 +296,6 @@ export default function DashItems() {
             <Table.HeadCell>Date Found</Table.HeadCell>
             <Table.HeadCell>Office Stored</Table.HeadCell>
             <Table.HeadCell>Status</Table.HeadCell>
-
-            {/* Conditionally display Claimant and Claimed Date columns for Claimed Items */}
             {filter === "Claimed Items" && (
               <>
                 <Table.HeadCell>Claimant</Table.HeadCell>
@@ -231,56 +303,75 @@ export default function DashItems() {
                 <Table.HeadCell>Claimed Date</Table.HeadCell>
               </>
             )}
-
-            {/* Conditionally display Turnover Date and Turnover Person for Unclaimed Items */}
             {filter === "Unclaimed Items" && (
               <>
-                <Table.HeadCell>Turnover Date</Table.HeadCell>  {/* Added */}
-                <Table.HeadCell>Turnover Person</Table.HeadCell>  {/* Added */}
+                <Table.HeadCell>Turnover Date</Table.HeadCell>
+                <Table.HeadCell>Turnover Person</Table.HeadCell>
               </>
             )}
-
-            {/* Conditionally display Actions column for Unclaimed Items */}
             {filter === "Unclaimed Items" && (
               <Table.HeadCell>Actions</Table.HeadCell>
             )}
           </Table.Head>
 
           <Table.Body className="bg-white divide-y dark:divide-gray-700 dark:bg-gray-800">
-            {filteredItems.map((item) => (
+            {sortedItems.map((item) => (
               <Table.Row
                 key={item.id}
                 className="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-600"
               >
                 <Table.Cell className="px-6 py-4">{item.item}</Table.Cell>
-                <Table.Cell className="px-6 py-4">
-                  <img
-                    className="w-24 h-auto"
-                    src={item.imageUrls && item.imageUrls[0]}
-                    alt={item.item}
-                  />
+                <Table.Cell className="px-0 py-4">
+                  {item.imageUrls && item.imageUrls[0] ? (
+                    <img
+                      src={item.imageUrls[0]}
+                      alt={item.item}
+                      className="w-24 h-24 rounded-md object-cover object-center"
+                      onError={(e) => {
+                        e.target.onError = null; // Prevents looping
+                        e.target.src = "/default-image.png"; // Specify your default image URL here
+                      }}
+                    />
+                  ) : (
+                    <img
+                      src="/default-image.png" // Specify your default image URL here
+                      alt="Default"
+                      className="w-24 h-24 rounded-md object-cover object-center"
+                    />
+                  )}
                 </Table.Cell>
+
                 <Table.Cell className="px-6 py-4">
                   {item.description}
                 </Table.Cell>
                 <Table.Cell className="px-6 py-4">{item.location}</Table.Cell>
                 <Table.Cell className="px-6 py-4">{item.category}</Table.Cell>
-                <Table.Cell className="px-6 py-4">{item.dateFound}</Table.Cell>
-                <Table.Cell className="px-6 py-4">{item.department}</Table.Cell>
+                <Table.Cell className="px-6 py-4">
+                  {item.dateFound
+                    ? new Date(item.dateFound).toLocaleDateString("en-US", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      })
+                    : "-"}
+                </Table.Cell>
+
+                <Table.Cell className="px-6 py-4">
+                  {item.department || "-"}
+                </Table.Cell>
                 <Table.Cell className="px-6 py-4">{item.status}</Table.Cell>
 
-                {/* Render Claimant and Claimed Date for Claimed Items */}
                 {filter === "Claimed Items" && (
                   <>
                     <Table.Cell className="px-6 py-4">
                       {item.claimantName}
                     </Table.Cell>
-                    <Table.Cell className="px-6 py-4">
+                    <Table.Cell className="px-3 py-4">
                       {item.claimantImage && (
                         <img
                           src={item.claimantImage}
                           alt="Claimant"
-                          className="w-16 h-16 rounded-lg"
+                          className="w-24 h-24 rounded-md object-cover object-center cursor-pointer"
                           onClick={() => {
                             setCurrentImageUrl(item.claimantImage);
                             setImageModalOpen(true);
@@ -288,17 +379,27 @@ export default function DashItems() {
                         />
                       )}
                     </Table.Cell>
-                    <Table.Cell className="px-6 py-4">
-                      {item.claimedDate}
+                    <Table.Cell className="px-2 py-4">
+                      {item.claimedDate
+                        ? new Date(item.claimedDate).toLocaleDateString(
+                            "en-US",
+                            {
+                              year: "numeric",
+                              month: "long",
+                              day: "numeric",
+                            }
+                          )
+                        : "-"}
                     </Table.Cell>
                   </>
                 )}
 
-                {/* Render Turnover Date and Turnover Person for Unclaimed Items */}
                 {filter === "Unclaimed Items" && (
                   <>
                     <Table.Cell className="px-6 py-4">
-                      {item.turnoverDate ? new Date(item.turnoverDate).toLocaleDateString() : "-"} 
+                      {item.turnoverDate
+                        ? new Date(item.turnoverDate).toLocaleDateString()
+                        : "-"}
                     </Table.Cell>
                     <Table.Cell className="px-6 py-4">
                       {item.turnoverPerson || "-"}
@@ -306,15 +407,13 @@ export default function DashItems() {
                   </>
                 )}
 
-                {/* Render Actions only for Unclaimed Items */}
                 {filter === "Unclaimed Items" &&
                   item.status === "Available" && (
-                    <Table.Cell className="px-6 py-4">
-                      <div className="flex items-center ml-auto space-x-2 sm:space-x-3">
+                    <Table.Cell className="px-0 py-4">
+                      <div className="flex items-center justify-center space-x-1">
                         <Button
                           color="blue"
                           onClick={() => {
-                            console.log('Editing item:', item);  // Debugging log to check the edited item data
                             setItemToEdit(item);
                             setIsModalOpen(true);
                           }}
@@ -330,11 +429,22 @@ export default function DashItems() {
                         >
                           <HiTrash className="w-4 h-4" />
                         </Button>
+                        {/* Add Turnover Button */}
+                        <Button
+                          color="purple"
+                          onClick={() => {
+                            console.log("Editing item:", item); // Add this line to debug
+                            setItemToEdit(item);
+                            // Open turnover modal (we'll create it soon)
+                            setIsTurnoverModalOpen(true);
+                          }}
+                        >
+                          <HiSwitchHorizontal className="w-4 h-4" />
+                        </Button>
                       </div>
                     </Table.Cell>
                   )}
 
-                {/* If no action is required, hide the last cell */}
                 {(filter !== "Unclaimed Items" ||
                   item.status !== "Available") && (
                   <Table.Cell colSpan={1} className="hidden" />
@@ -386,6 +496,14 @@ export default function DashItems() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSave={handleSave}
+        itemToEdit={itemToEdit}
+      />
+
+      {/* Include TurnoverModal */}
+      <TurnoverModal
+        isOpen={isTurnoverModalOpen}
+        onClose={() => setIsTurnoverModalOpen(false)}
+        onSave={handleTurnoverSave}
         itemToEdit={itemToEdit}
       />
     </div>

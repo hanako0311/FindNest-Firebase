@@ -1,21 +1,24 @@
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 
-export const generateReport = (items, historicalItems) => {
+export const generateReport = (items) => {
   try {
-    const combinedItems = [...items, ...historicalItems];
+    const combinedItems = [...items];
 
     const data = combinedItems.map((item) => ({
       Item: item.item,
       DateFound: item.displayDate,
       Location: item.location,
       Description: item.description,
+      Department: item.department,
       Category: item.category,
       Status: item.action,
       ClaimantName: item.claimantName || "N/A",
       ClaimedDate: item.claimedDate
         ? new Date(item.claimedDate).toISOString().split("T")[0]
         : "N/A",
+      TurnoverPerson: item.turnoverPerson || "",
+      TurnoverDate: item.turnoverDate || "",
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(data);

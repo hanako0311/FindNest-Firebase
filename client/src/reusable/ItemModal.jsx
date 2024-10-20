@@ -8,15 +8,7 @@ import {
   FileInput,
   Alert,
 } from "flowbite-react";
-import {
-  HiCheckCircle,
-  HiXCircle,
-  HiOutlineExclamationCircle,
-  HiPlus,
-  HiPencilAlt,
-  HiTrash,
-  HiOutlineTrash,
-} from "react-icons/hi";
+import { HiOutlineTrash } from "react-icons/hi";
 import Webcam from "react-webcam";
 import { useSelector } from "react-redux";
 import {
@@ -26,42 +18,8 @@ import {
   getDownloadURL,
 } from "firebase/storage";
 import { app } from "../firebase";
-
-const offices = ["SSO", "SSG", "SSD"];
-
-const categories = [
-  "Mobile Phones",
-  "Laptops/Tablets",
-  "Headphones/Earbuds",
-  "Chargers and Cables",
-  "Cameras",
-  "Electronic Accessories",
-  "Textbooks",
-  "Notebooks",
-  "Stationery Items",
-  "Art Supplies",
-  "Calculators",
-  "Coats and Jackets",
-  "Hats and Caps",
-  "Scarves and Gloves",
-  "Bags and Backpacks",
-  "Sunglasses",
-  "Jewelry and Watches",
-  "Umbrellas",
-  "Wallets and Purses",
-  "ID Cards and Passports",
-  "Keys",
-  "Personal Care Items",
-  "Sports Gear",
-  "Gym Equipment",
-  "Bicycles and Skateboards",
-  "Musical Instruments",
-  "Water Bottles",
-  "Lunch Boxes",
-  "Toys and Games",
-  "Decorative Items",
-  "Other",
-];
+import { offices, categories } from "../reusable/constant.js"; // Import office and category options
+import { format, parseISO } from "date-fns"; // Import date-fns
 
 const ItemModal = ({ isOpen, onClose, onSave, itemToEdit }) => {
   const [files, setFiles] = useState([]);
@@ -79,43 +37,44 @@ const ItemModal = ({ isOpen, onClose, onSave, itemToEdit }) => {
     status: "Available",
     claimantName: "",
     claimedDate: "",
-    department: "SSO",
+    department: "SSO", // Default office
     userRef: currentUser?.id,
-    turnoverDate: "", // Added turnoverDate
-    turnoverPerson: "", // Added turnoverPerson
   });
   const webcamRef = useRef(null);
   const [showWebcam, setShowWebcam] = useState(false);
   const [imageUploadError, setImageUploadError] = useState(false);
 
   useEffect(() => {
-    if (itemToEdit) {
-      setFormData({
-        item: itemToEdit.item || "",
-        dateFound: itemToEdit.dateFound
-          ? new Date(itemToEdit.dateFound).toISOString().split("T")[0]
-          : "",
-        location: itemToEdit.location || "",
-        description: itemToEdit.description || "",
-        imageUrls: itemToEdit.imageUrls || [],
-        category: itemToEdit.category || "Other",
-        status: itemToEdit.status || "Available",
-        claimantName: itemToEdit.claimantName || "",
-        claimedDate: itemToEdit.claimedDate || "",
-        department: itemToEdit.department || "SSO",
-        userRef: itemToEdit.userRef || currentUser?.id,
-        turnoverDate: itemToEdit.turnoverDate || "", // Added turnoverDate
-        turnoverPerson: itemToEdit.turnoverPerson || "", // Added turnoverPerson
-      });
-    } else {
-      resetForm();
+    if (isOpen) {
+      if (itemToEdit) {
+        setFormData({
+          item: itemToEdit.item || "",
+          dateFound: itemToEdit.dateFound
+            ? format(parseISO(itemToEdit.dateFound), "yyyy-MM-dd'T'HH:mm")
+            : "",
+          location: itemToEdit.location || "",
+          description: itemToEdit.description || "",
+          imageUrls: itemToEdit.imageUrls || [],
+          category: itemToEdit.category || "Other",
+          status: itemToEdit.status || "Available",
+          claimantName: itemToEdit.claimantName || "",
+          claimedDate: itemToEdit.claimedDate || "",
+          department: itemToEdit.department || "SSO",
+          userRef: itemToEdit.userRef || currentUser?.id,
+          // Include turnover fields
+          turnoverDate: itemToEdit.turnoverDate || "",
+          turnoverPerson: itemToEdit.turnoverPerson || "",
+        });
+      } else {
+        resetForm();
+      }
     }
-  }, [itemToEdit, currentUser]);
+  }, [isOpen, itemToEdit, currentUser]);
 
   const resetForm = () => {
     setFormData({
       item: "",
-      dateFound: "",
+      dateFound: "", // Clear the dateFound field
       location: "",
       description: "",
       imageUrls: [],
@@ -125,8 +84,6 @@ const ItemModal = ({ isOpen, onClose, onSave, itemToEdit }) => {
       claimedDate: "",
       department: "SSO",
       userRef: currentUser?.id,
-      turnoverDate: "", // Reset turnoverDate
-      turnoverPerson: "", // Reset turnoverPerson
     });
     setFiles([]);
     setWebcamImage(null);
@@ -151,9 +108,12 @@ const ItemModal = ({ isOpen, onClose, onSave, itemToEdit }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    // Preserve dateFound and set updatedAt automatically
     const updatedFormData = {
       ...formData,
-      updatedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(), // Automatically set the updatedAt field to the current time
+      turnoverDate: formData.turnoverDate, // Preserve turnoverDate
+      turnoverPerson: formData.turnoverPerson, // Preserve turnoverPerson
     };
 
     try {
@@ -284,16 +244,17 @@ const ItemModal = ({ isOpen, onClose, onSave, itemToEdit }) => {
                 Date Found
               </label>
               <input
-                type="date"
+                type="datetime-local"
                 name="dateFound"
                 id="dateFound"
                 className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
                 value={formData.dateFound}
                 onChange={handleChange}
                 required
-                disabled={!!itemToEdit} // Disable when editing
+                disabled={!!itemToEdit} // Disable editing of the date when modifying an item
               />
             </div>
+
             <div className="col-span-6 sm:col-span-3">
               <label
                 htmlFor="location"
@@ -310,39 +271,6 @@ const ItemModal = ({ isOpen, onClose, onSave, itemToEdit }) => {
                 value={formData.location}
                 onChange={handleChange}
                 required
-              />
-            </div>
-            <div className="col-span-6 sm:col-span-3">
-              <label
-                htmlFor="turnoverDate" // Added turnoverDate field
-                className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
-              >
-                Turnover Date
-              </label>
-              <TextInput
-                type="date"
-                name="turnoverDate"
-                id="turnoverDate"
-                className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
-                value={formData.turnoverDate}
-                onChange={handleChange}
-              />
-            </div>
-            <div className="col-span-6 sm:col-span-3">
-              <label
-                htmlFor="turnoverPerson" // Added turnoverPerson field
-                className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
-              >
-                Turnover Person
-              </label>
-              <TextInput
-                type="text"
-                name="turnoverPerson"
-                id="turnoverPerson"
-                className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
-                placeholder="Enter the name of the turnover person"
-                value={formData.turnoverPerson}
-                onChange={handleChange}
               />
             </div>
             <div className="col-span-6 sm:col-span-3">
@@ -368,26 +296,56 @@ const ItemModal = ({ isOpen, onClose, onSave, itemToEdit }) => {
             </div>
             <div className="col-span-6 sm:col-span-3">
               <label
+                htmlFor="description"
+                className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+              >
+                Description
+              </label>
+              <textarea
+                name="description"
+                id="description"
+                value={formData.description}
+                onChange={handleChange}
+                className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
+                placeholder="Description"
+                rows={4} // Adjust the 'rows' value to make the text area bigger (e.g., 4, 6, 8)
+                required
+              />
+            </div>
+            <div className="col-span-6 sm:col-span-3">
+              <label
                 htmlFor="department"
                 className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
               >
                 Office Stored
               </label>
-              <div className="flex flex-col">
-                {offices.map((office) => (
-                  <div key={office} className="flex items-center mb-2">
-                    <Radio
-                      id={office}
-                      name="department"
-                      value={office}
-                      checked={formData.department === office}
-                      onChange={handleRadioChange}
-                      className="mr-2"
-                    />
-                    <Label htmlFor={office}>{office}</Label>
-                  </div>
-                ))}
-              </div>
+              {itemToEdit ? (
+                // Disable office selection during item editing
+                <TextInput
+                  name="department"
+                  id="department"
+                  value={formData.department}
+                  disabled
+                  className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
+                />
+              ) : (
+                // Allow office selection when adding a new item
+                <div className="flex flex-col">
+                  {offices.map((office) => (
+                    <div key={office} className="flex items-center mb-2">
+                      <Radio
+                        id={office}
+                        name="department"
+                        value={office}
+                        checked={formData.department === office}
+                        onChange={handleRadioChange}
+                        className="mr-2"
+                      />
+                      <Label htmlFor={office}>{office}</Label>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
             <div className="col-span-6">
               <label

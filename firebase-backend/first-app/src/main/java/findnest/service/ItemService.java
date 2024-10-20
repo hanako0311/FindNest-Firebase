@@ -16,4 +16,6 @@ public interface ItemService {
     Items countAllItems();
     Items patchItem(String id, Map<String, Object> updates);
 
+    Items updateTurnoverDetails(String id, String turnoverDate, String turnoverPerson, String department);
+
 }

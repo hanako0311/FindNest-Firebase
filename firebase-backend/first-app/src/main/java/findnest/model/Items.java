@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
@@ -31,6 +32,6 @@ public class Items {
     private String turnoverPerson;
 
     private long totalCount;
-    private long availableCount;
+    private long availableCount;    
     private long claimedCount;
 }

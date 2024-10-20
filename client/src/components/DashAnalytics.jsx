@@ -10,8 +10,6 @@ import {
   HiClipboardList,
   HiDownload,
 } from "react-icons/hi";
-import Papa from "papaparse";
-import fileDownload from "js-file-download";
 import FilterModal from "../reusable/FilterModal";
 import { generateReport } from "../reusable/ReportGenerator";
 
@@ -41,27 +39,32 @@ export default function DashAnalytics() {
     try {
       const res = await fetch(`/api/items`);
       const fetchedItems = await res.json();
-          console.log("Fetched Items:", fetchedItems);
-
+      console.log("Fetched Items:", fetchedItems);
 
       let modifiedItems = [];
       const now = new Date();
       const foundCounts = Array(7).fill(0);
       const claimedCounts = Array(7).fill(0);
 
-      const recentFound = [];
-      const recentClaimed = [];
+      let recentFound = [];
+      let recentClaimed = [];
 
       fetchedItems.forEach((item) => {
-        const createdAt = new Date(item.createdAt);
+        const createdAt = new Date(item.dateFound);
         const daysAgoFound = Math.floor(
           (now - createdAt) / (1000 * 60 * 60 * 24)
         );
         if (daysAgoFound < 7) {
           foundCounts[daysAgoFound]++;
-          if (recentFound.length < 5) {
+          // if (recentFound.length < 5) {
             recentFound.push(item);
-          }
+          //   recentFound.sort((a, b) => new Date(b.createdAt || b.dateFound) - new Date(a.createdAt || a.dateFound));
+          // }
+        }
+
+        recentFound.sort((a, b) => new Date(b.createdAt || b.dateFound) - new Date(a.createdAt || a.dateFound));
+        if (recentFound.length > 5) {
+          recentFound = recentFound.slice(0, 5);
         }
 
         if (item.status === "Claimed" && item.claimedDate) {
@@ -71,10 +74,16 @@ export default function DashAnalytics() {
           );
           if (daysAgoClaimed < 7) {
             claimedCounts[daysAgoClaimed]++;
-            if (recentClaimed.length < 5) {
+            //if (recentClaimed.length < 5) {
               recentClaimed.push(item);
-            }
+            //  recentClaimed.sort((a, b) => new Date(b.claimedDate) - new Date(a.claimedDate));
+            //}
           }
+        }
+
+        recentClaimed.sort((a, b) => new Date(b.claimedDate) - new Date(a.claimedDate));
+        if (recentClaimed.length > 5) {
+          recentClaimed = recentClaimed.slice(0, 5);
         }
 
         modifiedItems.push({
@@ -82,17 +91,18 @@ export default function DashAnalytics() {
           key: `${item.id}-Found`,
           action: "Found",
           displayDate: new Date(
-            item.createdAt || item.updatedAt
+            item.createdAt || item.dateFound
           ).toLocaleDateString(),
           displayTime: new Date(
-            item.createdAt || item.updatedAt
+            item.createdAt || item.dateFound
           ).toLocaleTimeString([], {
             hour: "2-digit",
             minute: "2-digit",
           }),
-          sortDate: new Date(item.createdAt),
+          sortDate: new Date(item.createdAt || item.dateFound),
         });
 
+        // Add claimed items with a valid date
         if (item.status === "Claimed" && item.claimedDate) {
           modifiedItems.push({
             ...item,
@@ -112,101 +122,34 @@ export default function DashAnalytics() {
         }
       });
 
+       // Fetch Historical (Deleted) Items and Merge
+      const fetchHistoricalItems = async () => {
+        const res = await fetch(`/api/items/history`);
+        const fetchedHistoricalItems = await res.json();
+
+        if (Array.isArray(fetchedHistoricalItems)) {
+          fetchedHistoricalItems.forEach((item) => {
+            modifiedItems.push({
+              ...item,
+              action: "Deleted",
+              displayDate: new Date(item.updatedAt || item.createdAt).toLocaleDateString(),
+              displayTime: new Date(item.updatedAt || item.createdAt).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              }),
+              sortDate: new Date(item.updatedAt || item.createdAt),
+            });
+          });
+        }
+      };
+
+      await fetchHistoricalItems();
+
       // Apply filters
-      // Apply action filter
       if (filters.action && filters.action.length > 0) {
         modifiedItems = modifiedItems.filter((item) => filters.action.includes(item.action));
       }
 
-      //Apply name filter
-      if (filters.name) {
-        // Split the input by commas and trim spaces
-        const queries = filters.name.split(',').map(query => query.trim().toLowerCase());
-  
-        // Check if any of the queries match either the item name or the category
-        modifiedItems = modifiedItems.filter((item) =>
-          queries.some(query =>
-            item.item.toLowerCase().includes(query) ||   // Matches item name
-            item.category.toLowerCase().includes(query) || // Matches category
-            item.location.toLowerCase().includes(query) ||//Matches location
-            item.department.toLowerCase().includes(query)
-          )
-        );
-      }
-
-      //Apply Date Filter
-      if (filters.dateRange && filters.dateRange.length === 2) {
-        const [startDate, endDate] = filters.dateRange;
-  
-        // Convert startDate and endDate to Date objects for comparison
-        const start = startDate ? new Date(startDate) : null;
-        const end = endDate ? new Date(endDate) : null;
-  
-        modifiedItems = modifiedItems.filter((item) => {
-          const itemDate = new Date(item.createdAt);
-          // Check if itemDate is within the range
-          return (!start || itemDate >= start) && (!end || itemDate <= end);
-        });
-      }
-
-      setItems(modifiedItems.sort((a, b) => b.sortDate - a.sortDate));
-      setItemsFoundCount(foundCounts.reverse());
-      setItemsClaimedCount(claimedCounts.reverse());
-      setTotalItemsReported(fetchedItems.length);
-      setItemsClaimed(getCount(fetchedItems, "Claimed"));
-      setItemsPending(getCount(fetchedItems, "Available"));
-      setRecentFoundItems(recentFound);
-      setRecentClaimedItems(recentClaimed);
-      await fetchHistoricalItems(filters);
-    } catch (error) {
-      console.error("Failed to fetch items:", error);
-    }
-  };
-
-  const fetchHistoricalItems = async (filters = {}) => {
-    try {
-      const res = await fetch(`/api/items/history`);
-      const fetchedHistoricalItems = await res.json();
-
-      let modifiedItems = [];
-
-      if (Array.isArray(fetchedHistoricalItems)) {
-        modifiedItems = fetchedHistoricalItems.map((item) => ({
-          ...item,
-          action: "Delete",
-          displayDate: new Date(item.createdAt).toLocaleDateString(),
-          displayTime: new Date(item.createdAt).toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
-          sortDate: new Date(item.createdAt),
-        }));
-      } else if (fetchedHistoricalItems) {
-        modifiedItems = [
-          {
-            ...fetchedHistoricalItems,
-            action: "Delete",
-            displayDate: new Date(
-              fetchedHistoricalItems.createdAt
-            ).toLocaleDateString(),
-            displayTime: new Date(
-              fetchedHistoricalItems.createdAt
-            ).toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-            }),
-            sortDate: new Date(fetchedHistoricalItems.createdAt),
-          },
-        ];
-      } else {
-        console.error("Expected array:", fetchedHistoricalItems);
-      }
-
-      // Apply filters
-      // Apply action filter
-      if (filters.action && filters.action.length > 0) {
-        modifiedItems = modifiedItems.filter((item) => filters.action.includes(item.action));
-      }
       // Apply name filter
       if (filters.name) {
         // Split the input by commas and trim spaces
@@ -222,52 +165,85 @@ export default function DashAnalytics() {
           )
         );
       }
+
       // Apply date filter
       if (filters.dateRange && filters.dateRange.length === 2) {
         const [startDate, endDate] = filters.dateRange;
-  
-        // Convert startDate and endDate to Date objects for comparison
         const start = startDate ? new Date(startDate) : null;
         const end = endDate ? new Date(endDate) : null;
-  
+        
         modifiedItems = modifiedItems.filter((item) => {
-          const itemDate = new Date(item.createdAt);
-          // Check if itemDate is within the range
+          // Convert displayDate (string) back to a Date object for comparison
+          const itemDate = new Date(item.displayDate);  // Convert displayDate (e.g., "09/21/2023") to a Date object
+
+          // Check if itemDate (parsed from displayDate) is within the range
           return (!start || itemDate >= start) && (!end || itemDate <= end);
         });
       }
-  
 
-      console.log("Fetched Historical Items:", fetchedHistoricalItems);
-      setHistoricalItems(modifiedItems.sort((a, b) => b.sortDate - a.sortDate));
+      // Sort all items by date and update state
+      setItems(modifiedItems.sort((a, b) => b.sortDate - a.sortDate));
+      setItemsFoundCount(foundCounts.reverse());
+      setItemsClaimedCount(claimedCounts.reverse());
+      setTotalItemsReported(fetchedItems.length);
+      setItemsClaimed(getCount(fetchedItems, "Claimed"));
+      setItemsPending(getCount(fetchedItems, "Available"));
+      setRecentFoundItems(recentFound);
+      setRecentClaimedItems(recentClaimed);
     } catch (error) {
-      console.error("Failed to fetch historical items:", error);
+      console.error("Failed to fetch items:", error);
     }
   };
 
   const getCount = (items, status) =>
-     items.filter((item) => item.status === status).length;
+    items.filter((item) => item.status === status).length;
 
   useEffect(() => {
     console.log("Current User:", currentUser); // Add this line
     if (currentUser && currentUser.id) {
       console.log("Fetching items and users...");
-      
+
       if (filters) {
-        fetchItems(filters);  // Fetch items based on current filters
-        fetchHistoricalItems(filters);  // Fetch historical items based on filters
+        fetchItems(filters); // Fetch items based on current filters
       }
 
       if (currentUser.role === "admin" || currentUser.role === "superAdmin") {
-        fetchUsersCount();
-        // fetchItemCount();
+        fetchAllUsers();
       }
     }
   }, [currentUser, filters]);
 
-   // Apply filters
-   const applyFilters = (newFilters) => {
-    setFilters(newFilters)
+  useEffect(() => {
+    if (users.length > 0 && currentUser) {
+      let filteredUsers = users;
+
+      // Admin users should only count users in their department
+      if (currentUser.role === "admin") {
+        filteredUsers = users.filter(user => user.department === currentUser.department && user.role === "staff");
+      }
+
+      // Set the total users based on the filtered users
+      setTotalUsers(filteredUsers.length);
+    }
+  }, [users, currentUser]);
+
+  const fetchAllUsers = async () => {
+    try {
+      const res = await fetch('/api/users'); // Fetch all users from the backend
+      if (res.ok) {
+        const data = await res.json();
+        setUsers(data); // Store all users
+      } else {
+        console.error("Failed to fetch users, status:", res.status);
+      }
+    } catch (error) {
+      console.error("Error fetching users:", error);
+    }
+  };
+
+  // Apply filters
+  const applyFilters = (newFilters) => {
+    setFilters(newFilters);
   };
 
   // Clear filters
@@ -275,28 +251,8 @@ export default function DashAnalytics() {
     setFilters({});
   };
 
-  const fetchUsersCount = async () => {
-    try {
-      const res = await fetch("/api/users/count");
-
-      if (res.ok) {
-        const data = await res.text();
-        const totalUsers = parseInt(data, 10);
-
-        console.log("Fetched Users Data:", totalUsers);
-
-        setTotalUsers(totalUsers);
-        console.log("Total Users:", totalUsers);
-      } else {
-        console.error("Failed to fetch users, status:", res.status);
-      }
-    } catch (error) {
-      console.error("Failed to fetch users:", error);
-    }
-  };
-
   const handleGenerateReport = () => {
-    generateReport(items, historicalItems);
+    generateReport(items);
   };
 
   const pieChartData = {
@@ -448,7 +404,7 @@ export default function DashAnalytics() {
                   </Table.Cell>
                   <Table.Cell>{item.item}</Table.Cell>
                   <Table.Cell>
-                    {new Date(item.createdAt).toLocaleDateString()}
+                    {new Date(item.createdAt || item.dateFound).toLocaleDateString()}
                   </Table.Cell>
                 </Table.Row>
               ))}
@@ -469,7 +425,7 @@ export default function DashAnalytics() {
               <Table.HeadCell>Date</Table.HeadCell>
             </Table.Head>
             <Table.Body className="divide-y">
-              {recentClaimedItems.map((item) => (
+              {(recentClaimedItems || []).map((item) => (
                 <Table.Row
                   key={item.id}
                   className="bg-white dark:border-gray-700 dark:bg-gray-800"
@@ -502,7 +458,8 @@ export default function DashAnalytics() {
             Audit Logs
           </h1>
           <div className="flex justify-end mb-4">
-            {(currentUser.role === "admin" || currentUser.role === "superAdmin") && (
+            {(currentUser.role === "admin" ||
+              currentUser.role === "superAdmin") && (
               <button
                 onClick={handleGenerateReport}
                 className="bg-red-900 hover:bg-red-700 text-white font-bold py-2 px-4 rounded flex items-center"
@@ -514,66 +471,110 @@ export default function DashAnalytics() {
           </div>
         </div>
         <div className="flex mb-4">
-            <button 
-              onClick={() => setShowFilterModal(true)}
-              className="bg-red-900 hover:bg-red-700 text-white font-bold py-2 px-4 rounded flex items-center"
-              >
-              Filter</button>
-            <Button color="gray" 
-              onClick={clearFilters} 
-              className="ml-2">Clear Filters</Button>
-          </div>
+          <button
+            onClick={() => setShowFilterModal(true)}
+            className="bg-red-900 hover:bg-red-700 text-white font-bold py-2 px-4 rounded flex items-center"
+          >
+            Filter
+          </button>
+          <Button color="gray" onClick={clearFilters} className="ml-2">
+            Clear Filters
+          </Button>
+        </div>
+        <div className="w-full overflow-x-auto">
         <br></br>
         <Table
           hoverable
           className="min-w-full text-sm text-left text-gray-500 dark:text-gray-400"
         >
-          <Table.Head className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
-            <Table.HeadCell>Action</Table.HeadCell>
-            <Table.HeadCell>Date</Table.HeadCell>
-            <Table.HeadCell>Time</Table.HeadCell>
-            <Table.HeadCell>Item Name</Table.HeadCell>
+          <Table.Head>
+            <Table.HeadCell className="px-6">
+              {filters.action && filters.action.length > 0
+                ? filters.action.join("/ ") // Join multiple actions with commas
+                : "Action"}{" "}
+              {/* Default to "Action" if no filter is selected */}
+            </Table.HeadCell>
+            <Table.HeadCell className="px-2">
+              {filters.dateRange && filters.dateRange.length === 2
+                ? filters.dateRange[0] && !filters.dateRange[1] // Only start date selected
+                  ? new Date(
+                      new Date(filters.dateRange[0]).setDate(
+                        new Date(filters.dateRange[0]).getDate() + 1
+                      )
+                    ).toLocaleDateString("en-GB") // Show day before for start date
+                  : !filters.dateRange[0] && filters.dateRange[1] // Only end date selected
+                  ? new Date(filters.dateRange[1]).toLocaleDateString("en-GB") // Format end date
+                  : filters.dateRange[0] && filters.dateRange[1] && filters.dateRange[0] === filters.dateRange[1] // Both dates selected but are the same
+                  ? new Date(
+                      new Date(filters.dateRange[0]).setDate(
+                        new Date(filters.dateRange[0]).getDate() + 1
+                      )
+                    ).toLocaleDateString("en-GB") // Show day before if same
+                  : filters.dateRange[0] && filters.dateRange[1] // Both start and end date selected
+                  ? `${new Date(
+                      new Date(filters.dateRange[0]).setDate(
+                        new Date(filters.dateRange[0]).getDate() + 1
+                      )
+                    ).toLocaleDateString("en-GB")} - ${new Date(
+                      filters.dateRange[1]
+                    ).toLocaleDateString("en-GB")}` // Show adjusted start and regular end date
+                  : "Date" // Default to "Date" if no valid dates are selected
+                : "Date" // Default to "Date" if no filter is selected
+              }
+            </Table.HeadCell>
+            <Table.HeadCell className="px-2">Time</Table.HeadCell>
+            <Table.HeadCell className="px-2">Item Name</Table.HeadCell>
             <Table.HeadCell>Image</Table.HeadCell>
-            <Table.HeadCell>Description</Table.HeadCell>
-            <Table.HeadCell>Department Surrendered</Table.HeadCell>
-            <Table.HeadCell>Location Found</Table.HeadCell>
-            <Table.HeadCell>Category</Table.HeadCell>
+            <Table.HeadCell className="px-2">Description</Table.HeadCell>
+            <Table.HeadCell className="px-2">Department Surrendered</Table.HeadCell>
+            <Table.HeadCell className="px-2">Location Found</Table.HeadCell>
+            <Table.HeadCell className="px-2">Category</Table.HeadCell>            
+            <Table.HeadCell className="px-2">Turnover Person</Table.HeadCell>
+            <Table.HeadCell className="px-2">Turnover Date</Table.HeadCell>
           </Table.Head>
           <Table.Body className="bg-white divide-y dark:divide-gray-700 dark:bg-gray-800">
-            {[...items, ...historicalItems].map((item, index) => (
+            {[...items].map((item, index) => (
               <Table.Row
                 key={item.key || index}
                 className="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-600"
               >
                 <Table.Cell className="px-6 py-4">{item.action}</Table.Cell>
-                <Table.Cell className="px-6 py-4">
+                <Table.Cell className="px-2 py-4">
                   {item.displayDate}
                 </Table.Cell>
-                <Table.Cell className="px-6 py-4">
+                <Table.Cell className="px-2 py-4">
                   {item.displayTime}
                 </Table.Cell>
-                <Table.Cell className="px-6 py-4">
+                <Table.Cell className="px-2 py-4">
                   <Link to={`/item/${item.id}`}>{item.item}</Link>
                 </Table.Cell>
-                <Table.Cell className="px-6 py-4">
-                  {item.imageUrls && item.imageUrls[0] && (
+                <Table.Cell className="px-2 py-4">
+                  {item.imageUrls && item.imageUrls[0] ? (
                     <img
-                      src={item.imageUrls?.[0] || "default-image.png"}
+                      src={item.imageUrls[0]}
                       alt={item.item}
-                      className="w-24 h-auto"
+                      className="w-12 h-12 rounded-md object-cover object-center"
                       onError={(e) => {
-                        e.target.onError = null;
-                        e.target.src = "default-image.png";
+                        e.target.onError = null; // Prevents looping
+                        e.target.src = "/default-image.png"; // Specify your default image URL here
                       }}
+                    />
+                  ) : (
+                    <img
+                      src="/default-image.png" // Specify your default image URL here
+                      alt="Default"
+                      className="w-12 h-12 rounded-md object-cover object-center"
                     />
                   )}
                 </Table.Cell>
-                <Table.Cell className="px-6 py-4">
+                <Table.Cell className="px-2 py-4">
                   {item.description}
                 </Table.Cell>
-                <Table.Cell className="px-6 py-4">{item.department}</Table.Cell>
-                <Table.Cell className="px-6 py-4">{item.location}</Table.Cell>
-                <Table.Cell className="px-6 py-4">{item.category}</Table.Cell>
+                <Table.Cell className="px-2 py-4">{item.department}</Table.Cell>
+                <Table.Cell className="px-2 py-4">{item.location}</Table.Cell>
+                <Table.Cell className="px-2 py-4">{item.category}</Table.Cell>
+                <Table.Cell className="px-2 py-4">{item.turnoverPerson}</Table.Cell>
+                <Table.Cell className="px-2 py-4">{item.turnoverDate}</Table.Cell>
               </Table.Row>
             ))}
           </Table.Body>
@@ -581,10 +582,12 @@ export default function DashAnalytics() {
         <FilterModal
           show={showFilterModal}
           onClose={() => setShowFilterModal(false)}
-          onApplyFilters={applyFilters} // Apply the filters when submitted
+          onApplyFilters={applyFilters} 
           clearFilters={clearFilters}
         />
+        </div>
       </div>
     </div>
+    
   );
 }

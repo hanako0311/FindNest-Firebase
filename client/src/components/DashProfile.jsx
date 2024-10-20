@@ -8,7 +8,7 @@ import {
   uploadBytesResumable,
   ref,
 } from 'firebase/storage'
-import { app,auth } from '../firebase'
+import { app, auth } from '../firebase'
 import { signOut } from 'firebase/auth';
 import { CircularProgressbar } from 'react-circular-progressbar'
 import 'react-circular-progressbar/dist/styles.css'
@@ -44,6 +44,7 @@ export default function DashProfile() {
   const [showPassword, setShowPassword] = useState(false)
   const dispatch = useDispatch()
   const filePickerRef = useRef()
+  
   const handleImageChange = (e) => {
     const file = e.target.files[0]
     if (file && file.type.startsWith('image/')) {
@@ -56,6 +57,7 @@ export default function DashProfile() {
       setImageFileURL(null)
     }
   }
+
   useEffect(() => {
     console.log('Current user data:', currentUser)
   }, [currentUser])
@@ -69,12 +71,12 @@ export default function DashProfile() {
   const uploadImage = async (imageFile) => {
     setImageFileUploading(true);
     setImageFileUploadError(null);
-  
+
     const storage = getStorage(app);
     const fileName = new Date().getTime() + imageFile.name;
     const storageRef = ref(storage, fileName);
     const uploadTask = uploadBytesResumable(storageRef, imageFile);
-  
+
     uploadTask.on(
       'state_changed',
       (snapshot) => {
@@ -91,12 +93,12 @@ export default function DashProfile() {
       async () => {
         try {
           const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-          
+
           // Update the profile picture URL in the state
           setImageFileURL(downloadURL);
           setImageFileUploadProgress(null); // Also hide progress bar after successful upload
           setFormData({ ...formData, profilePicture: downloadURL });
-  
+
           // Make the PATCH request to update the user's profile picture
           const response = await fetch(`/api/users/${currentUser.id}/profile-picture?profilePictureUrl=${encodeURIComponent(downloadURL)}`, {
             method: 'PATCH',
@@ -105,11 +107,15 @@ export default function DashProfile() {
               // Include authentication headers if needed
             },
           });
-  
+
           if (!response.ok) {
             throw new Error('Failed to update user profile');
           }
-          setImageFileURL(currentUser.profilePicture);
+
+          // Dispatch updateSuccess to update the Redux store
+          dispatch(updateSuccess({ ...currentUser, profilePicture: downloadURL }));
+
+          // Reset the image file states after successful upload
           setImageFileUploading(false);
         } catch (error) {
           console.error(error);
@@ -121,8 +127,6 @@ export default function DashProfile() {
       }
     );
   };
-  
-  
 
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword)
@@ -131,11 +135,6 @@ export default function DashProfile() {
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.id]: e.target.value })
   }
-
-  useEffect(() => {
-    console.log('Form data:', formData)
-  }, [formData])
-
 
   const handleSignout = async () => {
     try {
@@ -182,9 +181,7 @@ export default function DashProfile() {
                   left: 0,
                 },
                 path: {
-                  stroke: `rgba(62, 152, 199, ${
-                    imageFileUploadProgress / 100
-                  })`,
+                  stroke: `rgba(62, 152, 199, ${imageFileUploadProgress / 100})`,
                 },
               }}
             />
@@ -308,14 +305,6 @@ export default function DashProfile() {
             </div>
           </div>
         </div>
-        {/* <Button
-          type="submit"
-          gradientDuoTone="redToYellow"
-          outline
-          disabled={loading || imageFileUploading}
-        >
-          {loading ? 'Loading...' : 'Update'}
-        </Button> */}
       </form>
 
       <div className="text-red-500 flex justify-end mt-5 ">

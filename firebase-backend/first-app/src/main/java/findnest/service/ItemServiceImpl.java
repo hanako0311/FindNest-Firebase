@@ -35,14 +35,6 @@ public class ItemServiceImpl implements ItemService {
         item.setUpdatedAt(timestamp);
         item.setStatus("Available");
 
-        // Ensure turnover fields are set
-        if (item.getTurnoverDate() == null) {
-            item.setTurnoverDate(""); // Default empty value
-        }
-        if (item.getTurnoverPerson() == null) {
-            item.setTurnoverPerson(""); // Default empty value
-        }
-
         dbRef.child(id).setValueAsync(item);
 
         return item;
@@ -106,44 +98,52 @@ public class ItemServiceImpl implements ItemService {
     }
 
     @Override
-    public Items updateItem(String id, Items item) {
-        CompletableFuture<Items> future = new CompletableFuture<>();
+public Items updateItem(String id, Items updatedItem) {
+    CompletableFuture<Items> future = new CompletableFuture<>();
 
-        dbRef.child(id).addListenerForSingleValueEvent(new ValueEventListener() {
-            @Override
-            public void onDataChange(DataSnapshot snapshot) {
-                if (snapshot.exists()) {
-                    item.setId(id);
-                    item.setUpdatedAt(Instant.now().toString());
-
-                    // Ensure turnover fields are set
-                    if (item.getTurnoverDate() == null) {
-                        item.setTurnoverDate(""); // Default empty value
+    dbRef.child(id).addListenerForSingleValueEvent(new ValueEventListener() {
+        @Override
+        public void onDataChange(DataSnapshot snapshot) {
+            if (snapshot.exists()) {
+                Items existingItem = snapshot.getValue(Items.class);
+                if (existingItem != null) {
+                    // Preserve the turnover fields if they are not being updated
+                    if (updatedItem.getTurnoverDate() == null) {
+                        updatedItem.setTurnoverDate(existingItem.getTurnoverDate());
                     }
-                    if (item.getTurnoverPerson() == null) {
-                        item.setTurnoverPerson(""); // Default empty value
+                    if (updatedItem.getTurnoverPerson() == null) {
+                        updatedItem.setTurnoverPerson(existingItem.getTurnoverPerson());
                     }
 
-                    dbRef.child(id).setValueAsync(item);
-                    future.complete(item);
+                    // Set the ID and updated timestamp
+                    updatedItem.setId(id);
+                    updatedItem.setUpdatedAt(Instant.now().toString());
+
+                    // Save the updated item
+                    dbRef.child(id).setValueAsync(updatedItem);
+                    future.complete(updatedItem);
                 } else {
                     future.complete(null);
                 }
+            } else {
+                future.complete(null);
             }
-
-            @Override
-            public void onCancelled(DatabaseError error) {
-                future.completeExceptionally(error.toException());
-            }
-        });
-
-        try {
-            return future.get();
-        } catch (Exception e) {
-            e.printStackTrace();
-            return null;
         }
+
+        @Override
+        public void onCancelled(DatabaseError error) {
+            future.completeExceptionally(error.toException());
+        }
+    });
+
+    try {
+        return future.get();
+    } catch (Exception e) {
+        e.printStackTrace();
+        return null;
     }
+}
+
 
     @Override
     public void deleteItem(String id) {
@@ -265,7 +265,7 @@ public class ItemServiceImpl implements ItemService {
             return future.get();
         } catch (Exception e) {
             e.printStackTrace();
-            return new Items();
+            return new Items(); 
         }
     }
 
@@ -278,27 +278,67 @@ public class ItemServiceImpl implements ItemService {
                 if (snapshot.exists()) {
                     Items item = snapshot.getValue(Items.class);
                     if (item != null) {
+                        if (!"Claimed".equalsIgnoreCase(item.getStatus())) {
+                            item.setStatus("Claimed");
+                            item.setClaimedDate(Instant.now().toString());
+                        }
+                        updates.forEach((key, value) -> {
+                            switch (key) {
+                                case "claimantName":
+                                    item.setClaimantName((String) value);
+                                    break;
+                                case "claimantImage":
+                                    item.setClaimantImage((String) value);
+                                    break;
+                                case "userRef":
+                                    item.setUserRef((String) value);
+                                    break;
+                            }
+                        });
 
-                        // Update turnover fields if present in updates
-                        if (updates.containsKey("turnoverDate")) {
-                            item.setTurnoverDate((String) updates.get("turnoverDate"));
-                        }
-                        if (updates.containsKey("turnoverPerson")) {
-                            item.setTurnoverPerson((String) updates.get("turnoverPerson"));
-                        }
-
-                        // Update other fields
-                        if (updates.containsKey("claimantName")) {
-                            item.setClaimantName((String) updates.get("claimantName"));
-                        }
-                        if (updates.containsKey("claimantImage")) {
-                            item.setClaimantImage((String) updates.get("claimantImage"));
-                        }
-                        if (updates.containsKey("userRef")) {
-                            item.setUserRef((String) updates.get("userRef"));
-                        }
-                        
                         item.setUpdatedAt(Instant.now().toString());
+                        dbRef.child(id).setValueAsync(item);
+                        future.complete(item);
+                    } else {
+                        future.complete(null);
+                    }
+                } else {
+                    future.complete(null);
+                }
+            }
+
+            @Override
+            public void onCancelled(DatabaseError error) {
+                future.completeExceptionally(error.toException());
+            }
+        });
+
+        try {
+            return future.get();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    // Corrected placement of updateTurnoverDetails method
+    public Items updateTurnoverDetails(String id, String turnoverDate, String turnoverPerson, String department) {
+        CompletableFuture<Items> future = new CompletableFuture<>();
+        dbRef.child(id).addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot snapshot) {
+                if (snapshot.exists()) {
+                    Items item = snapshot.getValue(Items.class);
+                    if (item != null) {
+                        // Update the turnoverDate, turnoverPerson, and department
+                        item.setTurnoverDate(turnoverDate);
+                        item.setTurnoverPerson(turnoverPerson);
+                        item.setDepartment(department);
+                        
+                        // Set the updated timestamp
+                        item.setUpdatedAt(Instant.now().toString());
+
+                        // Save the updated item back to the database
                         dbRef.child(id).setValueAsync(item);
                         future.complete(item);
                     } else {
