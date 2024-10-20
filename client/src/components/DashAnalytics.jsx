@@ -481,19 +481,20 @@ export default function DashAnalytics() {
             Clear Filters
           </Button>
         </div>
+        <div className="w-full overflow-x-auto">
         <br></br>
         <Table
           hoverable
           className="min-w-full text-sm text-left text-gray-500 dark:text-gray-400"
         >
           <Table.Head>
-            <Table.HeadCell>
+            <Table.HeadCell className="px-6">
               {filters.action && filters.action.length > 0
                 ? filters.action.join("/ ") // Join multiple actions with commas
                 : "Action"}{" "}
               {/* Default to "Action" if no filter is selected */}
             </Table.HeadCell>
-            <Table.HeadCell>
+            <Table.HeadCell className="px-2">
               {filters.dateRange && filters.dateRange.length === 2
                 ? filters.dateRange[0] && !filters.dateRange[1] // Only start date selected
                   ? new Date(
@@ -521,13 +522,15 @@ export default function DashAnalytics() {
                 : "Date" // Default to "Date" if no filter is selected
               }
             </Table.HeadCell>
-            <Table.HeadCell>Time</Table.HeadCell>
-            <Table.HeadCell>Item Name</Table.HeadCell>
+            <Table.HeadCell className="px-2">Time</Table.HeadCell>
+            <Table.HeadCell className="px-2">Item Name</Table.HeadCell>
             <Table.HeadCell>Image</Table.HeadCell>
-            <Table.HeadCell>Description</Table.HeadCell>
-            <Table.HeadCell>Department Surrendered</Table.HeadCell>
-            <Table.HeadCell>Location Found</Table.HeadCell>
-            <Table.HeadCell>Category</Table.HeadCell>
+            <Table.HeadCell className="px-2">Description</Table.HeadCell>
+            <Table.HeadCell className="px-2">Department Surrendered</Table.HeadCell>
+            <Table.HeadCell className="px-2">Location Found</Table.HeadCell>
+            <Table.HeadCell className="px-2">Category</Table.HeadCell>            
+            <Table.HeadCell className="px-2">Turnover Person</Table.HeadCell>
+            <Table.HeadCell className="px-2">Turnover Date</Table.HeadCell>
           </Table.Head>
           <Table.Body className="bg-white divide-y dark:divide-gray-700 dark:bg-gray-800">
             {[...items].map((item, index) => (
@@ -536,16 +539,16 @@ export default function DashAnalytics() {
                 className="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-600"
               >
                 <Table.Cell className="px-6 py-4">{item.action}</Table.Cell>
-                <Table.Cell className="px-6 py-4">
+                <Table.Cell className="px-2 py-4">
                   {item.displayDate}
                 </Table.Cell>
-                <Table.Cell className="px-6 py-4">
+                <Table.Cell className="px-2 py-4">
                   {item.displayTime}
                 </Table.Cell>
-                <Table.Cell className="px-6 py-4">
+                <Table.Cell className="px-2 py-4">
                   <Link to={`/item/${item.id}`}>{item.item}</Link>
                 </Table.Cell>
-                <Table.Cell className="px-6 py-4">
+                <Table.Cell className="px-2 py-4">
                   {item.imageUrls && item.imageUrls[0] ? (
                     <img
                       src={item.imageUrls[0]}
@@ -564,12 +567,14 @@ export default function DashAnalytics() {
                     />
                   )}
                 </Table.Cell>
-                <Table.Cell className="px-6 py-4">
+                <Table.Cell className="px-2 py-4">
                   {item.description}
                 </Table.Cell>
-                <Table.Cell className="px-6 py-4">{item.department}</Table.Cell>
-                <Table.Cell className="px-6 py-4">{item.location}</Table.Cell>
-                <Table.Cell className="px-6 py-4">{item.category}</Table.Cell>
+                <Table.Cell className="px-2 py-4">{item.department}</Table.Cell>
+                <Table.Cell className="px-2 py-4">{item.location}</Table.Cell>
+                <Table.Cell className="px-2 py-4">{item.category}</Table.Cell>
+                <Table.Cell className="px-2 py-4">{item.turnoverPerson}</Table.Cell>
+                <Table.Cell className="px-2 py-4">{item.turnoverDate}</Table.Cell>
               </Table.Row>
             ))}
           </Table.Body>
@@ -580,6 +585,7 @@ export default function DashAnalytics() {
           onApplyFilters={applyFilters} 
           clearFilters={clearFilters}
         />
+        </div>
       </div>
     </div>
     

@@ -10,12 +10,15 @@ export const generateReport = (items) => {
       DateFound: item.displayDate,
       Location: item.location,
       Description: item.description,
+      Department: item.department,
       Category: item.category,
       Status: item.action,
       ClaimantName: item.claimantName || "N/A",
       ClaimedDate: item.claimedDate
         ? new Date(item.claimedDate).toISOString().split("T")[0]
         : "N/A",
+      TurnoverPerson: item.turnoverPerson || "",
+      TurnoverDate: item.turnoverDate || "",
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(data);
