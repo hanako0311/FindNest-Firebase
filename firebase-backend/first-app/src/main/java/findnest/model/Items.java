@@ -26,6 +26,7 @@ public class Items {
     private String updatedAt;
     private String claimedDate;
     private String claimantImage; // URL of the image for the claimant
+    private String foundByName; // New field for the name of the person who found the item
 
     private long totalCount;
     private long availableCount;

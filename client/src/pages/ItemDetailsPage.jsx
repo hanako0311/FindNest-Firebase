@@ -16,6 +16,7 @@ function ItemDetailModal({ id, isOpen, onClose }) {
     status: "",
     claimantName: "",
     dateFound: "",
+    foundByName: "",
   });
   const [loading, setLoading] = useState(true);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
@@ -112,6 +113,12 @@ function ItemDetailModal({ id, isOpen, onClose }) {
                 {item.status}
               </span>
             </p>
+            {item.foundByName && ( // Display Found By if available
+              <p className="text-lg mb-4">
+                <span className="font-medium">Found By:</span>
+                <span className="ml-2">{item.foundByName}</span>
+              </p>
+            )}
             {item.status === "claimed" && (
               <p className="text-lg mb-4">
                 <span className="font-medium">Claimant Name:</span>

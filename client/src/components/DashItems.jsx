@@ -221,7 +221,9 @@ export default function DashItems() {
             <Table.HeadCell>Date Found</Table.HeadCell>
             <Table.HeadCell>Office Stored</Table.HeadCell>
             <Table.HeadCell>Status</Table.HeadCell>
-
+            {(filter === "All Items" || filter === "Unclaimed Items") && (
+              <Table.HeadCell>Found By</Table.HeadCell>
+            )}
             {/* Conditionally display Claimant and Claimed Date columns for Claimed Items */}
             {filter === "Claimed Items" && (
               <>
@@ -230,7 +232,6 @@ export default function DashItems() {
                 <Table.HeadCell>Claimed Date</Table.HeadCell>
               </>
             )}
-
             {/* Conditionally display Actions column for Unclaimed Items */}
             {filter === "Unclaimed Items" && (
               <Table.HeadCell>Actions</Table.HeadCell>
@@ -259,7 +260,10 @@ export default function DashItems() {
                 <Table.Cell className="px-6 py-4">{item.dateFound}</Table.Cell>
                 <Table.Cell className="px-6 py-4">{item.department}</Table.Cell>
                 <Table.Cell className="px-6 py-4">{item.status}</Table.Cell>
-
+                {/* Conditionally render "Found By" cell for "All Items" and "Unclaimed Items" */}
+                {(filter === "All Items" || filter === "Unclaimed Items") && (
+                  <Table.Cell>{item.foundByName}</Table.Cell>
+                )}
                 {/* Render Claimant and Claimed Date for Claimed Items */}
                 {filter === "Claimed Items" && (
                   <>
@@ -284,7 +288,6 @@ export default function DashItems() {
                     </Table.Cell>
                   </>
                 )}
-
                 {/* Render Actions only for Unclaimed Items */}
                 {filter === "Unclaimed Items" &&
                   item.status === "Available" && (
@@ -311,7 +314,6 @@ export default function DashItems() {
                       </div>
                     </Table.Cell>
                   )}
-
                 {/* If no action is required, hide the last cell */}
                 {(filter !== "Unclaimed Items" ||
                   item.status !== "Available") && (

@@ -26,6 +26,7 @@ export default function CreateLostFoundPost() {
     imageUrls: [],
     department: currentUser?.department,
     userRef: currentUser?.id,
+    foundByName: "", // New field for the name of the person who found the item
   });
   const [imageUploadError, setImageUploadError] = useState(false);
   const [reportSubmitError, setReportSubmitError] = useState(null);
@@ -305,6 +306,15 @@ export default function CreateLostFoundPost() {
             />
           </div>
         </div>
+        <TextInput
+          type="text"
+          placeholder="Name of the person who found the item"
+          required
+          name="foundByName"
+          className="flex-auto sm:flex-1"
+          onChange={handleChange}
+          value={formData.foundByName}
+        />
         <textarea
           className="block w-full p-2.5 text-sm text-gray-900 bg-white border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
           placeholder="Describe the item..."
