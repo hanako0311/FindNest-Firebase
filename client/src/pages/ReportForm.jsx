@@ -26,6 +26,8 @@ export default function CreateLostFoundPost() {
     imageUrls: [],
     department: currentUser?.department,
     userRef: currentUser?.id,
+    foundByName: "", // Field for the person who found the item
+    staffInvolved: "", // Text field for staff involved
   });
   const [imageUploadError, setImageUploadError] = useState(false);
   const [reportSubmitError, setReportSubmitError] = useState(null);
@@ -36,6 +38,14 @@ export default function CreateLostFoundPost() {
 
   const navigate = useNavigate();
   const webcamRef = useRef(null);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prevFormData) => ({
+      ...prevFormData,
+      [name]: value,
+    }));
+  };
 
   const handleImageSubmit = (e) => {
     if (files.length > 0 && formData.imageUrls.length + files.length <= 5) {
@@ -57,9 +67,13 @@ export default function CreateLostFoundPost() {
           setImageUploadError(
             "Image upload failed: Each image must be less than 2MB."
           );
+          setTimeout(() => setImageUploadError(null), 3000);
         });
     } else {
-      setImageUploadError("You can only upload up to 5 images per report.");
+      setImageUploadError(
+        "Please select at least one image, but no more than five, to continue."
+      );
+      setTimeout(() => setImageUploadError(null), 3000);
     }
     setFiles([]); // Clear files after upload
     setKey((prevKey) => prevKey + 1); // Increment key to force re-render of file input
@@ -73,94 +87,19 @@ export default function CreateLostFoundPost() {
       const uploadTask = uploadBytesResumable(storageRef, file);
       uploadTask.on(
         "state_changed",
-        (snapshot) => {
-          // Remove progress display logic
-        },
+        null,
         (error) => {
           console.error("Upload error:", error);
           reject(error);
         },
         () => {
           getDownloadURL(uploadTask.snapshot.ref)
-            .then((downloadURL) => {
-              resolve(downloadURL);
-            })
-            .catch((error) => {
-              console.error("Failed to get download URL:", error);
-              reject(error);
-            });
+            .then((downloadURL) => resolve(downloadURL))
+            .catch((error) => reject(error));
         }
       );
     });
   };
-
-  const handleRemoveImage = (index) => {
-    setFormData((prevFormData) => ({
-      ...prevFormData,
-      imageUrls: prevFormData.imageUrls.filter((_, i) => i !== index),
-    }));
-  };
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prevFormData) => ({
-      ...prevFormData,
-      [name]: value,
-    }));
-  };
-
-  const handleDateChange = (date) => {
-    setFormData((prevFormData) => ({
-      ...prevFormData,
-      dateFound: date,
-    }));
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      // Ensure all images are uploaded before submission
-      if (files.length > 0) {
-        handleImageSubmit();
-      }
-      
-      const res = await fetch("/api/items/save", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData), // Send the formData including imageUrls
-      });
-  
-      const data = await res.json();
-      if (!res.ok) {
-        setReportSubmitError(data.message);
-        return;
-      }
-  
-      setReportSuccess("Item reported successfully!");
-      setReportSubmitError(null);
-  
-      setTimeout(() => navigate("/dashboard?tab=found-items"), 3000); 
-  
-      // Reset the form
-      setFormData({
-        item: "",
-        dateFound: new Date(),
-        location: "",
-        description: "",
-        category: "",
-        imageUrls: [],
-        department: "", 
-      });
-      setFiles([]); 
-      setKey((prevKey) => prevKey + 1);
-    } catch (error) {
-      setReportSubmitError("Something went wrong");
-      setReportSuccess(null);
-    }
-  };
-  
 
   const handleCapture = useCallback(() => {
     const imageSrc = webcamRef.current.getScreenshot();
@@ -183,9 +122,54 @@ export default function CreateLostFoundPost() {
       setCapturedImage(null);
       setShowWebcam(false);
     } catch (err) {
-      setImageUploadError(
-        "Image upload failed: Each image must be less than 2MB."
+      setImageUploadError("Image upload failed: Each image must be less than 2MB.");
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (formData.imageUrls.length === 0) {
+      setReportSubmitError(
+        "At least one image is required to submit the form."
       );
+      setTimeout(() => setReportSubmitError(null), 3000);
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/items/save", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setReportSubmitError(data.message);
+        return;
+      }
+
+      setReportSuccess("Item reported successfully!");
+      setTimeout(() => navigate("/dashboard?tab=found-items"), 3000);
+
+      setFormData({
+        item: "",
+        dateFound: new Date(),
+        location: "",
+        description: "",
+        category: "",
+        imageUrls: [],
+        department: "",
+        foundByName: "",
+        staffInvolved: "",
+      });
+      setFiles([]);
+      setKey((prevKey) => prevKey + 1);
+    } catch (error) {
+      setReportSubmitError("Something went wrong");
     }
   };
 
@@ -229,52 +213,52 @@ export default function CreateLostFoundPost() {
         Report Found Item
       </h1>
       <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <TextInput
-            type="text"
-            placeholder="Item Found"
-            required
-            name="item"
-            className="flex-auto sm:flex-1"
-            onChange={handleChange}
-            value={formData.item}
-          />
-          <Select
-            name="category"
-            required
-            className="w-full sm:w-1/4"
-            onChange={handleChange}
-            value={formData.category}
-          >
-            <option value="">Select a category</option>
-            {categories.map((category) => (
-              <option key={category} value={category}>
-                {category}
-              </option>
-            ))}
-          </Select>
-        </div>
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <TextInput
-            type="text"
-            placeholder="Location Found"
-            required
-            name="location"
-            className="flex-auto sm:flex-1"
-            onChange={handleChange}
-          />
-          <div className="w-full sm:w-1/4">
-            <DatePicker
-              selected={formData.dateFound}
-              onChange={handleDateChange}
-              required
-              maxDate={new Date()}
-              className="w-full p-2.5 text-sm text-gray-900 bg-white border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-            />
-          </div>
-        </div>
+        <TextInput
+          type="text"
+          placeholder="Item Found"
+          required
+          name="item"
+          onChange={handleChange}
+          value={formData.item}
+        />
+        <Select
+          name="category"
+          required
+          onChange={handleChange}
+          value={formData.category}
+        >
+          <option value="">Select a category</option>
+          {categories.map((category) => (
+            <option key={category} value={category}>
+              {category}
+            </option>
+          ))}
+        </Select>
+        <TextInput
+          type="text"
+          placeholder="Location Found"
+          required
+          name="location"
+          onChange={handleChange}
+        />
+        <TextInput
+          type="text"
+          placeholder="Name of the person who found the item"
+          required
+          name="foundByName"
+          onChange={handleChange}
+          value={formData.foundByName}
+        />
+        <TextInput
+          type="text"
+          placeholder="Enter staff name"
+          required
+          name="staffInvolved"
+          onChange={handleChange}
+          value={formData.staffInvolved}
+        />
         <textarea
-          className="block w-full p-2.5 text-sm text-gray-900 bg-white border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+          className="block w-full p-2.5 text-sm"
           placeholder="Describe the item..."
           required
           rows="4"
@@ -287,29 +271,15 @@ export default function CreateLostFoundPost() {
           <FileInput
             key={key}
             type="file"
-            id="images"
             accept="image/*"
             multiple
             onChange={(e) => setFiles(e.target.files)}
-            disabled={formData.imageUrls.length >= 5} // Disable the file input if the limit is reached
+            disabled={formData.imageUrls.length >= 5}
           />
-          {formData.imageUrls.length >= 5 && (
-            <Alert color="info">
-              You have reached the maximum limit of 5 images.
-            </Alert>
-          )}
-          <Button
-            type="button"
-            gradientDuoTone="pinkToOrange"
-            onClick={handleImageSubmit}
-          >
+          <Button type="button" onClick={handleImageSubmit}>
             Upload Image
           </Button>
-          <Button
-            type="button"
-            gradientDuoTone="purpleToPink"
-            onClick={() => setShowWebcam(!showWebcam)}
-          >
+          <Button type="button" onClick={() => setShowWebcam(!showWebcam)}>
             {showWebcam ? "Close Webcam" : "Open Webcam"}
           </Button>
         </div>
@@ -322,12 +292,7 @@ export default function CreateLostFoundPost() {
               screenshotFormat="image/jpeg"
               className="w-full h-64 border-2 border-gray-300 rounded-lg"
             />
-            <Button
-              type="button"
-              gradientDuoTone="greenToBlue"
-              onClick={handleCapture}
-              className="mt-2"
-            >
+            <Button type="button" onClick={handleCapture} className="mt-2">
               Capture Image
             </Button>
           </div>
@@ -337,18 +302,22 @@ export default function CreateLostFoundPost() {
         {formData.imageUrls.length > 0 && (
           <div className="flex space-x-4">
             {formData.imageUrls.map((url, index) => (
-              <div
-                key={url}
-                className="flex flex-col items-center p-4 border border-gray-300 shadow rounded-lg hover:shadow-md transition-shadow"
-              >
+              <div key={url} className="flex flex-col items-center">
                 <img
                   src={url}
                   alt={`listing ${index}`}
-                  className="w-24 h-24 md:w-32 md:h-32 object-contain rounded-lg"
+                  className="w-24 h-24 object-contain"
                 />
                 <button
                   type="button"
-                  onClick={() => handleRemoveImage(index)}
+                  onClick={() =>
+                    setFormData((prevFormData) => ({
+                      ...prevFormData,
+                      imageUrls: prevFormData.imageUrls.filter(
+                        (_, i) => i !== index
+                      ),
+                    }))
+                  }
                   className="mt-3 text-red-600 hover:text-red-800"
                 >
                   <HiOutlineTrash className="w-6 h-6" />
@@ -357,15 +326,9 @@ export default function CreateLostFoundPost() {
             ))}
           </div>
         )}
-        <Button type="submit" gradientDuoTone="pinkToOrange">
-          Submit Found Item
-        </Button>
-        {reportSuccess && (
-          <Alert color="success">{reportSuccess}</Alert> // Display the success alert
-        )}
-        {reportSubmitError && (
-          <Alert color="failure">{reportSubmitError}</Alert>
-        )}
+        <Button type="submit">Submit Found Item</Button>
+        {reportSuccess && <Alert color="success">{reportSuccess}</Alert>}
+        {reportSubmitError && <Alert color="failure">{reportSubmitError}</Alert>}
       </form>
     </div>
   );

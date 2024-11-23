@@ -34,4 +34,8 @@ public class Items {
     private long totalCount;
     private long availableCount;    
     private long claimedCount;
+
+    // Newly added fields
+    private String foundByName; // Name of the person who found the item
+    private String staffInvolved; // Name of the staff involved in the process
 }
