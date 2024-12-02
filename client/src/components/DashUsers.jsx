@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { useSelector } from 'react-redux';
-import { Modal, Table, Button, TextInput, Toast, Avatar } from 'flowbite-react';
+import React, { useEffect, useState } from "react";
+import { useSelector } from "react-redux";
+import { Modal, Table, Button, TextInput, Toast, Avatar } from "flowbite-react";
 import {
   HiOutlineExclamationCircle,
   HiTrash,
@@ -8,11 +8,10 @@ import {
   HiPencilAlt,
   HiCheckCircle,
   HiXCircle,
-} from 'react-icons/hi';
-import { AiOutlineSearch } from 'react-icons/ai';
-import UserModal from '../reusable/UserModal'; // Import UserModal
-
-const departments = ['SSG', 'SSO', 'SSD'];
+} from "react-icons/hi";
+import { AiOutlineSearch } from "react-icons/ai";
+import UserModal from "../reusable/UserModal"; // Import UserModal
+import { offices } from "../reusable/constant"; // Import the offices array from Constant.js
 
 export default function DashUsers() {
   const { currentUser } = useSelector((state) => state.user);
@@ -21,40 +20,40 @@ export default function DashUsers() {
   const [showModal, setShowModal] = useState(false);
   const [showUserModal, setShowUserModal] = useState(false);
   const [userToEdit, setUserToEdit] = useState(null);
-  const [userIdToDelete, setUserIdToDelete] = useState('');
+  const [userIdToDelete, setUserIdToDelete] = useState("");
   const [toastMessage, setToastMessage] = useState(null); // Unified toast message state
-  const [toastType, setToastType] = useState(''); // Type of toast: success or error
-  const [searchTerm, setSearchTerm] = useState('');
+  const [toastType, setToastType] = useState(""); // Type of toast: success or error
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const res = await fetch('/api/users');
+        const res = await fetch("/api/users");
         if (res.ok) {
           const data = await res.json();
           let filteredUsers;
 
-          if (currentUser.role === 'admin') {
+          if (currentUser.role === "admin") {
             filteredUsers = data.filter(
               (user) =>
-                user.role === 'staff' &&
+                user.role === "staff" &&
                 user.department === currentUser.department &&
                 user.id !== currentUser.id
             );
-          } else if (currentUser.role === 'superAdmin') {
+          } else if (currentUser.role === "superAdmin") {
             filteredUsers = data.filter((user) => user.id !== currentUser.id);
           }
 
           setUsers(filteredUsers);
         } else {
-          console.error('Failed to fetch users:', res.statusText);
+          console.error("Failed to fetch users:", res.statusText);
         }
       } catch (error) {
-        console.error('Error fetching users:', error.message);
+        console.error("Error fetching users:", error.message);
       }
     };
 
-    if (['admin', 'superAdmin'].includes(currentUser.role)) {
+    if (["admin", "superAdmin"].includes(currentUser.role)) {
       fetchUsers();
     }
   }, [currentUser.id, currentUser.role, currentUser.department]);
@@ -78,19 +77,19 @@ export default function DashUsers() {
   const handleDeleteUser = async () => {
     try {
       const res = await fetch(`/api/users/${userIdToDelete}`, {
-        method: 'DELETE',
+        method: "DELETE",
       });
       if (res.ok) {
-        setToastType('success');
-        setToastMessage('User deleted successfully');
+        setToastType("success");
+        setToastMessage("User deleted successfully");
         setUsers(users.filter((user) => user.id !== userIdToDelete));
       } else {
-        setToastType('error');
-        setToastMessage('Failed to delete user');
+        setToastType("error");
+        setToastMessage("Failed to delete user");
       }
     } catch (error) {
-      setToastType('error');
-      setToastMessage('Error deleting user');
+      setToastType("error");
+      setToastMessage("Error deleting user");
     } finally {
       setShowModal(false);
     }
@@ -108,21 +107,21 @@ export default function DashUsers() {
 
   const handleUserSave = async (user) => {
     try {
-      const method = user.id ? 'PUT' : 'POST';
-      const url = user.id ? `/api/users/${user.id}` : '/api/users';
+      const method = user.id ? "PUT" : "POST";
+      const url = user.id ? `/api/users/${user.id}` : "/api/users";
       const res = await fetch(url, {
         method,
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(user),
       });
 
       if (res.ok) {
         const updatedUser = await res.json();
-        setToastType('success');
+        setToastType("success");
         setToastMessage(
-          user.id ? 'User updated successfully' : 'User added successfully'
+          user.id ? "User updated successfully" : "User added successfully"
         );
         setUsers((users) =>
           user.id
@@ -130,12 +129,12 @@ export default function DashUsers() {
             : [...users, updatedUser]
         );
       } else {
-        setToastType('error');
-        setToastMessage('Failed to save user');
+        setToastType("error");
+        setToastMessage("Failed to save user");
       }
     } catch (error) {
-      setToastType('error');
-      setToastMessage('Error saving user');
+      setToastType("error");
+      setToastMessage("Error saving user");
     } finally {
       setShowUserModal(false);
     }
@@ -144,15 +143,18 @@ export default function DashUsers() {
   const renderToast = () => {
     if (toastMessage) {
       return (
-        <Toast className="fixed top-4 right-4 z-50" onClose={() => setToastMessage(null)}>
+        <Toast
+          className="fixed top-4 right-4 z-50"
+          onClose={() => setToastMessage(null)}
+        >
           <div
             className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
-              toastType === 'success'
-                ? 'bg-green-100 text-green-500 dark:bg-green-800 dark:text-green-200'
-                : 'bg-red-100 text-red-500 dark:bg-red-800 dark:text-red-200'
+              toastType === "success"
+                ? "bg-green-100 text-green-500 dark:bg-green-800 dark:text-green-200"
+                : "bg-red-100 text-red-500 dark:bg-red-800 dark:text-red-200"
             }`}
           >
-            {toastType === 'success' ? (
+            {toastType === "success" ? (
               <HiCheckCircle className="h-5 w-5" />
             ) : (
               <HiXCircle className="h-5 w-5" />
@@ -238,8 +240,12 @@ export default function DashUsers() {
                 <Table.Cell className="px-6 py-4">{user.role}</Table.Cell>
                 <Table.Cell className="px-6 py-4">
                   <div className="flex items-center ml-auto space-x-2 sm:space-x-3">
-                    <Button onClick={() => handleEditUser(user)} color="blue">
-                      <HiPencilAlt className="w-4 h-4 mr-2" /> Edit
+                    <Button
+                      onClick={() => handleEditUser(user)}
+                      color="blue"
+                      className="flex justify-center items-center"
+                    >
+                      <HiPencilAlt className="w-4 h-4" />
                     </Button>
                     <Button
                       onClick={() => {
@@ -247,8 +253,9 @@ export default function DashUsers() {
                         setUserIdToDelete(user.id);
                       }}
                       color="failure"
+                      className="flex justify-center items-center"
                     >
-                      <HiTrash className="w-4 h-4 mr-2" /> Delete
+                      <HiTrash className="w-4 h-4" />
                     </Button>
                   </div>
                 </Table.Cell>
@@ -287,7 +294,7 @@ export default function DashUsers() {
         onClose={() => setShowUserModal(false)}
         user={userToEdit}
         onSave={handleUserSave}
-        departments={departments}
+        departments={offices} // Use the offices array from Constant.js
         currentUser={currentUser}
       />
     </div>

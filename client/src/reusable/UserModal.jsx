@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import { Modal, TextInput, Button } from "flowbite-react";
+import Select from "react-select"; // Import react-select for searchable dropdown
 
 const UserModal = ({
   show,
@@ -50,9 +51,11 @@ const UserModal = ({
     setLocalUser((prevUser) => ({ ...prevUser, [id]: value }));
   };
 
-  const handleRadioChange = (e) => {
-    const { name, value } = e.target;
-    setLocalUser((prevUser) => ({ ...prevUser, [name]: value }));
+  const handleSelectChange = (selectedOption) => {
+    setLocalUser((prevUser) => ({
+      ...prevUser,
+      department: selectedOption.value,
+    }));
   };
 
   const handleSubmit = (e) => {
@@ -107,12 +110,19 @@ const UserModal = ({
     return null;
   };
 
+  // Prepare department options for react-select
+  const departmentOptions = departments.map((dept) => ({
+    value: dept,
+    label: dept,
+  }));
+
   return (
     <Modal show={show} onClose={onClose} size="2xl">
       <Modal.Header>{user ? "Edit User" : "Add New User"}</Modal.Header>
       <Modal.Body>
         <form onSubmit={handleSubmit}>
           <div className="grid grid-cols-6 gap-6">
+            {/* First Name */}
             <div className="col-span-6 sm:col-span-3">
               <label
                 htmlFor="firstName"
@@ -128,6 +138,8 @@ const UserModal = ({
                 onChange={handleChange}
               />
             </div>
+
+            {/* Middle Name */}
             <div className="col-span-6 sm:col-span-3">
               <label
                 htmlFor="middleName"
@@ -143,6 +155,8 @@ const UserModal = ({
                 onChange={handleChange}
               />
             </div>
+
+            {/* Last Name */}
             <div className="col-span-6 sm:col-span-3">
               <label
                 htmlFor="lastName"
@@ -158,6 +172,8 @@ const UserModal = ({
                 onChange={handleChange}
               />
             </div>
+
+            {/* Username */}
             <div className="col-span-6 sm:col-span-3">
               <label
                 htmlFor="username"
@@ -173,6 +189,8 @@ const UserModal = ({
                 onChange={handleChange}
               />
             </div>
+
+            {/* Email */}
             <div className="col-span-6 sm:col-span-3">
               <label
                 htmlFor="email"
@@ -188,6 +206,8 @@ const UserModal = ({
                 onChange={handleChange}
               />
             </div>
+
+            {/* Department */}
             <div className="col-span-6 sm:col-span-3">
               <label
                 htmlFor="department"
@@ -196,24 +216,15 @@ const UserModal = ({
                 Department
               </label>
               {currentUser.role === "superAdmin" ? (
-                // SuperAdmin can edit the department
-                <div className="flex space-x-4">
-                  {departments.map((dept) => (
-                    <label key={dept} className="flex items-center">
-                      <input
-                        type="radio"
-                        id="department"
-                        name="department"
-                        value={dept}
-                        checked={localUser.department === dept}
-                        onChange={handleChange}
-                        className="form-radio"
-                        required
-                      />
-                      <span className="ml-2">{dept}</span>
-                    </label>
-                  ))}
-                </div>
+                // SuperAdmin can edit the department using a searchable dropdown
+                <Select
+                  options={departmentOptions}
+                  value={departmentOptions.find(
+                    (option) => option.value === localUser.department
+                  )}
+                  onChange={handleSelectChange}
+                  isSearchable
+                />
               ) : (
                 // Admin can only view the department (read-only)
                 <TextInput
@@ -226,6 +237,7 @@ const UserModal = ({
               )}
             </div>
 
+            {/* Password */}
             <div className="col-span-6 sm:col-span-3">
               <label
                 htmlFor="password"
@@ -250,6 +262,7 @@ const UserModal = ({
               </div>
             </div>
 
+            {/* Role Selection for SuperAdmin */}
             {currentUser.role === "superAdmin" && (
               <div className="col-span-6 sm:col-span-3">
                 <label
@@ -266,7 +279,7 @@ const UserModal = ({
                       name="role"
                       value="admin"
                       checked={localUser.role === "admin"}
-                      onChange={handleRadioChange}
+                      onChange={handleChange}
                       className="form-radio"
                     />
                     <span className="ml-2">Admin</span>
@@ -278,7 +291,7 @@ const UserModal = ({
                       name="role"
                       value="staff"
                       checked={localUser.role === "staff"}
-                      onChange={handleRadioChange}
+                      onChange={handleChange}
                       className="form-radio"
                     />
                     <span className="ml-2">Staff</span>
@@ -287,12 +300,14 @@ const UserModal = ({
               </div>
             )}
           </div>
+
           {errorMessage && (
             <div className="mb-4 text-red-500">{errorMessage}</div>
           )}
           {successMessage && (
             <div className="mb-4 text-green-500">{successMessage}</div>
           )}
+
           <div className="items-center p-6 border-t border-gray-200 rounded-b dark:border-gray-700">
             <Button
               type="submit"

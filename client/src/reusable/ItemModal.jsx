@@ -1,13 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import {
-  Modal,
-  TextInput,
-  Button,
-  Radio,
-  Label,
-  FileInput,
-  Alert,
-} from "flowbite-react";
+import { Modal, TextInput, Button, Alert, FileInput } from "flowbite-react";
 import { HiOutlineTrash } from "react-icons/hi";
 import Webcam from "react-webcam";
 import { useSelector } from "react-redux";
@@ -19,6 +11,7 @@ import {
 } from "firebase/storage";
 import { app } from "../firebase";
 import { offices, categories } from "../reusable/constant.js"; // Import office and category options
+import Select from "react-select"; // Import react-select
 import { format, parseISO } from "date-fns"; // Import date-fns
 
 const ItemModal = ({ isOpen, onClose, onSave, itemToEdit }) => {
@@ -37,7 +30,7 @@ const ItemModal = ({ isOpen, onClose, onSave, itemToEdit }) => {
     status: "Available",
     claimantName: "",
     claimedDate: "",
-    department: "SSO", // Default office
+    department: currentUser?.department || "SSO", // Use currentUser's department or default to SSO
     userRef: currentUser?.id,
   });
   const webcamRef = useRef(null);
@@ -59,9 +52,8 @@ const ItemModal = ({ isOpen, onClose, onSave, itemToEdit }) => {
           status: itemToEdit.status || "Available",
           claimantName: itemToEdit.claimantName || "",
           claimedDate: itemToEdit.claimedDate || "",
-          department: itemToEdit.department || "SSO",
+          department: itemToEdit.department || currentUser?.department || "SSO", // Preserve department
           userRef: itemToEdit.userRef || currentUser?.id,
-          // Include turnover fields
           turnoverDate: itemToEdit.turnoverDate || "",
           turnoverPerson: itemToEdit.turnoverPerson || "",
         });
@@ -82,7 +74,7 @@ const ItemModal = ({ isOpen, onClose, onSave, itemToEdit }) => {
       status: "Available",
       claimantName: "",
       claimedDate: "",
-      department: "SSO",
+      department: currentUser?.department || "SSO", // Use currentUser's department or default to SSO
       userRef: currentUser?.id,
     });
     setFiles([]);
@@ -101,8 +93,11 @@ const ItemModal = ({ isOpen, onClose, onSave, itemToEdit }) => {
     setFormData((prevData) => ({ ...prevData, [name]: value }));
   };
 
-  const handleRadioChange = (e) => {
-    setFormData((prevData) => ({ ...prevData, department: e.target.value }));
+  const handleSelectChange = (selectedOption) => {
+    setFormData((prevData) => ({
+      ...prevData,
+      department: selectedOption.value, // Update department when superAdmin
+    }));
   };
 
   const handleSubmit = async (e) => {
@@ -212,6 +207,12 @@ const ItemModal = ({ isOpen, onClose, onSave, itemToEdit }) => {
     }
   }, [isOpen]);
 
+  // Prepare department options for react-select
+  const departmentOptions = offices.map((office) => ({
+    value: office,
+    label: office,
+  }));
+
   return (
     <Modal show={isOpen} onClose={onClose} size="2xl">
       <Modal.Header>{itemToEdit ? "Edit Item" : "Add New Item"}</Modal.Header>
@@ -312,6 +313,8 @@ const ItemModal = ({ isOpen, onClose, onSave, itemToEdit }) => {
                 required
               />
             </div>
+
+            {/* Office Stored (Department) */}
             <div className="col-span-6 sm:col-span-3">
               <label
                 htmlFor="department"
@@ -319,34 +322,27 @@ const ItemModal = ({ isOpen, onClose, onSave, itemToEdit }) => {
               >
                 Office Stored
               </label>
-              {itemToEdit ? (
-                // Disable office selection during item editing
+              {currentUser.role === "superAdmin" && !itemToEdit ? (
+                <Select
+                  options={departmentOptions}
+                  value={departmentOptions.find(
+                    (option) => option.value === formData.department
+                  )}
+                  onChange={handleSelectChange}
+                  isSearchable
+                />
+              ) : (
                 <TextInput
                   name="department"
                   id="department"
                   value={formData.department}
-                  disabled
+                  readOnly
                   className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
                 />
-              ) : (
-                // Allow office selection when adding a new item
-                <div className="flex flex-col">
-                  {offices.map((office) => (
-                    <div key={office} className="flex items-center mb-2">
-                      <Radio
-                        id={office}
-                        name="department"
-                        value={office}
-                        checked={formData.department === office}
-                        onChange={handleRadioChange}
-                        className="mr-2"
-                      />
-                      <Label htmlFor={office}>{office}</Label>
-                    </div>
-                  ))}
-                </div>
               )}
             </div>
+
+            {/* Image Upload Section */}
             <div className="col-span-6">
               <label
                 htmlFor="imageUrls"

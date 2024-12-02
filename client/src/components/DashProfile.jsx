@@ -1,72 +1,72 @@
-import { Alert, Button, TextInput, Modal } from 'flowbite-react'
-import { useEffect, useRef, useState } from 'react'
-import { useSelector, useDispatch } from 'react-redux'
-import { FaSignOutAlt, FaEye, FaEyeSlash } from 'react-icons/fa'
+import { Alert, Button, TextInput, Modal } from "flowbite-react";
+import { useEffect, useRef, useState } from "react";
+import { useSelector, useDispatch } from "react-redux";
+import { FaSignOutAlt, FaEye, FaEyeSlash } from "react-icons/fa";
 import {
   getDownloadURL,
   getStorage,
   uploadBytesResumable,
   ref,
-} from 'firebase/storage'
-import { app, auth } from '../firebase'
-import { signOut } from 'firebase/auth';
-import { CircularProgressbar } from 'react-circular-progressbar'
-import 'react-circular-progressbar/dist/styles.css'
+} from "firebase/storage";
+import { app, auth } from "../firebase";
+import { signOut } from "firebase/auth";
+import { CircularProgressbar } from "react-circular-progressbar";
+import "react-circular-progressbar/dist/styles.css";
 import {
   updateStart,
   updateSuccess,
   updateFailure,
   signoutSuccess,
-} from '../redux/user/userSlice'
-import { HiOutlineExclamationCircle } from 'react-icons/hi'
+} from "../redux/user/userSlice";
+import { HiOutlineExclamationCircle } from "react-icons/hi";
 
 export default function DashProfile() {
-  const { currentUser, error, loading } = useSelector((state) => state.user)
-  const [imageFile, setImageFile] = useState(null)
-  const [imageFileURL, setImageFileURL] = useState(null)
-  const [imageFileUploadProgress, setImageFileUploadProgress] = useState(null)
-  const [imageFileUploadError, setImageFileUploadError] = useState(null)
-  const [imageFileUploading, setImageFileUploading] = useState(false)
-  const [updateUserSuccess, setUpdateUserSuccess] = useState(null)
-  const [updateUserError, setUpdateUserError] = useState(null)
-  const [showSignoutModal, setShowSignoutModal] = useState(false)
+  const { currentUser, error, loading } = useSelector((state) => state.user);
+  const [imageFile, setImageFile] = useState(null);
+  const [imageFileURL, setImageFileURL] = useState(null);
+  const [imageFileUploadProgress, setImageFileUploadProgress] = useState(null);
+  const [imageFileUploadError, setImageFileUploadError] = useState(null);
+  const [imageFileUploading, setImageFileUploading] = useState(false);
+  const [updateUserSuccess, setUpdateUserSuccess] = useState(null);
+  const [updateUserError, setUpdateUserError] = useState(null);
+  const [showSignoutModal, setShowSignoutModal] = useState(false);
 
   const [formData, setFormData] = useState({
-    firstname: currentUser?.firstName || '',
-    middlename: currentUser?.middleName || '',
-    lastname: currentUser?.lastName || '',
-    username: currentUser?.username || '',
-    email: currentUser?.email || '',
-    department: currentUser?.department || '',
-    password: '',
-  })
+    firstname: currentUser?.firstName || "",
+    middlename: currentUser?.middleName || "",
+    lastname: currentUser?.lastName || "",
+    username: currentUser?.username || "",
+    email: currentUser?.email || "",
+    department: currentUser?.department || "",
+    password: "",
+  });
 
-  const [showPassword, setShowPassword] = useState(false)
-  const dispatch = useDispatch()
-  const filePickerRef = useRef()
-  
+  const [showPassword, setShowPassword] = useState(false);
+  const dispatch = useDispatch();
+  const filePickerRef = useRef();
+
   const handleImageChange = (e) => {
-    const file = e.target.files[0]
-    if (file && file.type.startsWith('image/')) {
-      setImageFile(file)
-      setImageFileURL(URL.createObjectURL(file))
-      setImageFileUploadError(null) // Clear any previous errors
+    const file = e.target.files[0];
+    if (file && file.type.startsWith("image/")) {
+      setImageFile(file);
+      setImageFileURL(URL.createObjectURL(file));
+      setImageFileUploadError(null); // Clear any previous errors
     } else if (file) {
-      setImageFileUploadError('Please select an image file.') // Set an error message
-      setImageFile(null)
-      setImageFileURL(null)
+      setImageFileUploadError("Please select an image file."); // Set an error message
+      setImageFile(null);
+      setImageFileURL(null);
     }
-  }
+  };
 
   useEffect(() => {
-    console.log('Current user data:', currentUser)
-  }, [currentUser])
+    console.log("Current user data:", currentUser);
+  }, [currentUser]);
 
   useEffect(() => {
     if (imageFile) {
-      uploadImage(imageFile) // Pass the imageFile to the function
+      uploadImage(imageFile); // Pass the imageFile to the function
     }
-  }, [imageFile])
+  }, [imageFile]);
 
   const uploadImage = async (imageFile) => {
     setImageFileUploading(true);
@@ -78,14 +78,15 @@ export default function DashProfile() {
     const uploadTask = uploadBytesResumable(storageRef, imageFile);
 
     uploadTask.on(
-      'state_changed',
+      "state_changed",
       (snapshot) => {
-        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+        const progress =
+          (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
         setImageFileUploadProgress(progress.toFixed(0));
       },
       (error) => {
         console.error(error);
-        setImageFileUploadError('Could not upload image (max size 2MB)');
+        setImageFileUploadError("Could not upload image (max size 2MB)");
         setImageFileUploadProgress(null); // Ensures the progress bar is hidden on error
         setImageFile(null); // Clears the current file state
         setImageFileURL(currentUser.profilePicture); // Reverts the image URL to the original profile picture
@@ -100,26 +101,35 @@ export default function DashProfile() {
           setFormData({ ...formData, profilePicture: downloadURL });
 
           // Make the PATCH request to update the user's profile picture
-          const response = await fetch(`/api/users/${currentUser.id}/profile-picture?profilePictureUrl=${encodeURIComponent(downloadURL)}`, {
-            method: 'PATCH',
-            headers: {
-              'Content-Type': 'application/json',
-              // Include authentication headers if needed
-            },
-          });
+          const response = await fetch(
+            `/api/users/${
+              currentUser.id
+            }/profile-picture?profilePictureUrl=${encodeURIComponent(
+              downloadURL
+            )}`,
+            {
+              method: "PATCH",
+              headers: {
+                "Content-Type": "application/json",
+                // Include authentication headers if needed
+              },
+            }
+          );
 
           if (!response.ok) {
-            throw new Error('Failed to update user profile');
+            throw new Error("Failed to update user profile");
           }
 
           // Dispatch updateSuccess to update the Redux store
-          dispatch(updateSuccess({ ...currentUser, profilePicture: downloadURL }));
+          dispatch(
+            updateSuccess({ ...currentUser, profilePicture: downloadURL })
+          );
 
           // Reset the image file states after successful upload
           setImageFileUploading(false);
         } catch (error) {
           console.error(error);
-          setImageFileUploadError('Failed to update user profile');
+          setImageFileUploadError("Failed to update user profile");
           setImageFileUploadProgress(null); // Hide progress bar on error
           setImageFile(null); // Clear the file state
           setImageFileURL(currentUser.profilePicture); // Revert the image URL to the original
@@ -129,22 +139,21 @@ export default function DashProfile() {
   };
 
   const togglePasswordVisibility = () => {
-    setShowPassword(!showPassword)
-  }
+    setShowPassword(!showPassword);
+  };
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.id]: e.target.value })
-  }
+    setFormData({ ...formData, [e.target.id]: e.target.value });
+  };
 
   const handleSignout = async () => {
     try {
       // Sign out the user
       await signOut(auth);
-      
+
       // Redirect to the login page
       dispatch(signoutSuccess());
-      window.location.href = '/sign-in'; // Or another appropriate page
-  
+      window.location.href = "/sign-in"; // Or another appropriate page
     } catch (error) {
       console.error("Sign out failed:", error.message);
       setUpdateUserError("Sign out failed: " + error.message);
@@ -155,7 +164,7 @@ export default function DashProfile() {
   return (
     <div className="max-w-lg mx-auto p-3 w-full">
       <h1 className="my-7 text-center font-semibold text-3xl">Profile</h1>
-      <form  className="flex flex-col gap-6">
+      <form className="flex flex-col gap-6">
         <input
           type="file"
           accept="image/*"
@@ -174,14 +183,16 @@ export default function DashProfile() {
               strokeWidth={5}
               styles={{
                 root: {
-                  width: '100%',
-                  height: '100%',
-                  position: 'absolute',
+                  width: "100%",
+                  height: "100%",
+                  position: "absolute",
                   top: 0,
                   left: 0,
                 },
                 path: {
-                  stroke: `rgba(62, 152, 199, ${imageFileUploadProgress / 100})`,
+                  stroke: `rgba(62, 152, 199, ${
+                    imageFileUploadProgress / 100
+                  })`,
                 },
               }}
             />
@@ -192,7 +203,7 @@ export default function DashProfile() {
             className={`rounded-full w-full h-full object-cover border-8 border-[lightgray] ${
               imageFileUploadProgress &&
               imageFileUploadProgress < 100 &&
-              'opacity-60'
+              "opacity-60"
             }`}
           />
         </div>
@@ -292,7 +303,7 @@ export default function DashProfile() {
           <div className="relative">
             <TextInput
               id="password"
-              type={showPassword ? 'text' : 'password'}
+              type={showPassword ? "text" : "password"}
               placeholder="Password"
               value={formData.password}
               onChange={handleChange}
@@ -311,13 +322,13 @@ export default function DashProfile() {
         <button
           onClick={() => setShowSignoutModal(true)}
           style={{
-            display: 'flex',
-            justifyContent: 'flex-end',
-            alignItems: 'center',
+            display: "flex",
+            justifyContent: "flex-end",
+            alignItems: "center",
           }}
         >
           Sign Out
-          <FaSignOutAlt style={{ fontSize: '12px', marginLeft: '8px' }} />
+          <FaSignOutAlt style={{ fontSize: "12px", marginLeft: "8px" }} />
         </button>
       </div>
       {updateUserSuccess && (
@@ -356,5 +367,5 @@ export default function DashProfile() {
         </Modal.Body>
       </Modal>
     </div>
-  )
+  );
 }

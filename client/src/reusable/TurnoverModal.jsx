@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { Modal, TextInput, Button, Radio, Label } from "flowbite-react";
-
-const offices = ["SSO", "SSG", "SSD"]; // Office options
+import { Modal, TextInput, Button } from "flowbite-react";
+import { offices } from "../reusable/constant"; // Import offices from constants file
+import Select from "react-select"; // Import react-select for searchable dropdown
 
 const TurnoverModal = ({ isOpen, onClose, onSave, itemToEdit }) => {
   const [formData, setFormData] = useState({
@@ -27,8 +27,11 @@ const TurnoverModal = ({ isOpen, onClose, onSave, itemToEdit }) => {
     setFormData((prevData) => ({ ...prevData, [name]: value }));
   };
 
-  const handleRadioChange = (e) => {
-    setFormData((prevData) => ({ ...prevData, department: e.target.value }));
+  const handleSelectChange = (selectedOption) => {
+    setFormData((prevData) => ({
+      ...prevData,
+      department: selectedOption.value, // Update the department with selected value
+    }));
   };
 
   const handleSubmit = async (e) => {
@@ -78,6 +81,12 @@ const TurnoverModal = ({ isOpen, onClose, onSave, itemToEdit }) => {
       setErrorMessage("Error saving turnover data.");
     }
   };
+
+  // Prepare department options for react-select
+  const departmentOptions = offices.map((office) => ({
+    value: office,
+    label: office,
+  }));
 
   return (
     <Modal show={isOpen} onClose={onClose} size="md">
@@ -132,21 +141,15 @@ const TurnoverModal = ({ isOpen, onClose, onSave, itemToEdit }) => {
               >
                 Office Stored
               </label>
-              <div className="flex flex-col">
-                {offices.map((office) => (
-                  <div key={office} className="flex items-center mb-2">
-                    <Radio
-                      id={office}
-                      name="department"
-                      value={office}
-                      checked={formData.department === office}
-                      onChange={handleRadioChange}
-                      className="mr-2"
-                    />
-                    <Label htmlFor={office}>{office}</Label>
-                  </div>
-                ))}
-              </div>
+              <Select
+                options={departmentOptions}
+                value={departmentOptions.find(
+                  (option) => option.value === formData.department
+                )}
+                onChange={handleSelectChange}
+                isSearchable
+                required
+              />
             </div>
           </div>
 

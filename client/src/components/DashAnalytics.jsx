@@ -56,13 +56,14 @@ export default function DashAnalytics() {
         );
         if (daysAgoFound < 7) {
           foundCounts[daysAgoFound]++;
-          // if (recentFound.length < 5) {
-            recentFound.push(item);
-          //   recentFound.sort((a, b) => new Date(b.createdAt || b.dateFound) - new Date(a.createdAt || a.dateFound));
-          // }
+          recentFound.push(item);
         }
 
-        recentFound.sort((a, b) => new Date(b.createdAt || b.dateFound) - new Date(a.createdAt || a.dateFound));
+        recentFound.sort(
+          (a, b) =>
+            new Date(b.createdAt || b.dateFound) -
+            new Date(a.createdAt || a.dateFound)
+        );
         if (recentFound.length > 5) {
           recentFound = recentFound.slice(0, 5);
         }
@@ -74,14 +75,13 @@ export default function DashAnalytics() {
           );
           if (daysAgoClaimed < 7) {
             claimedCounts[daysAgoClaimed]++;
-            //if (recentClaimed.length < 5) {
-              recentClaimed.push(item);
-            //  recentClaimed.sort((a, b) => new Date(b.claimedDate) - new Date(a.claimedDate));
-            //}
+            recentClaimed.push(item);
           }
         }
 
-        recentClaimed.sort((a, b) => new Date(b.claimedDate) - new Date(a.claimedDate));
+        recentClaimed.sort(
+          (a, b) => new Date(b.claimedDate) - new Date(a.claimedDate)
+        );
         if (recentClaimed.length > 5) {
           recentClaimed = recentClaimed.slice(0, 5);
         }
@@ -91,15 +91,15 @@ export default function DashAnalytics() {
           key: `${item.id}-Found`,
           action: "Found",
           displayDate: new Date(
-            item.createdAt || item.dateFound
+            item.dateFound || item.createdAt
           ).toLocaleDateString(),
           displayTime: new Date(
-            item.createdAt || item.dateFound
+            item.dateFound || item.createdAt
           ).toLocaleTimeString([], {
             hour: "2-digit",
             minute: "2-digit",
           }),
-          sortDate: new Date(item.createdAt || item.dateFound),
+          sortDate: new Date(item.dateFound || item.createdAt),
         });
 
         // Add claimed items with a valid date
@@ -122,18 +122,43 @@ export default function DashAnalytics() {
         }
       });
 
-       // Fetch Historical (Deleted) Items and Merge
+      // Fetch Historical (Deleted) Items and Merge without overwriting "Found"
       const fetchHistoricalItems = async () => {
         const res = await fetch(`/api/items/history`);
         const fetchedHistoricalItems = await res.json();
 
         if (Array.isArray(fetchedHistoricalItems)) {
           fetchedHistoricalItems.forEach((item) => {
+            // Add found items from historical data, if they have a dateFound
+            if (item.dateFound) {
+              modifiedItems.push({
+                ...item,
+                key: `${item.id}-Found`,
+                action: "Found",
+                displayDate: new Date(
+                  item.dateFound || item.createdAt
+                ).toLocaleDateString(),
+                displayTime: new Date(
+                  item.dateFound || item.createdAt
+                ).toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                }),
+                sortDate: new Date(item.dateFound || item.createdAt),
+              });
+            }
+
+            // Add the deleted row separately
             modifiedItems.push({
               ...item,
+              key: `${item.id}-Deleted`,
               action: "Deleted",
-              displayDate: new Date(item.updatedAt || item.createdAt).toLocaleDateString(),
-              displayTime: new Date(item.updatedAt || item.createdAt).toLocaleTimeString([], {
+              displayDate: new Date(
+                item.updatedAt || item.createdAt
+              ).toLocaleDateString(),
+              displayTime: new Date(
+                item.updatedAt || item.createdAt
+              ).toLocaleTimeString([], {
                 hour: "2-digit",
                 minute: "2-digit",
               }),
@@ -147,21 +172,26 @@ export default function DashAnalytics() {
 
       // Apply filters
       if (filters.action && filters.action.length > 0) {
-        modifiedItems = modifiedItems.filter((item) => filters.action.includes(item.action));
+        modifiedItems = modifiedItems.filter((item) =>
+          filters.action.includes(item.action)
+        );
       }
 
       // Apply name filter
       if (filters.name) {
         // Split the input by commas and trim spaces
-        const queries = filters.name.split(',').map(query => query.trim().toLowerCase());
-  
+        const queries = filters.name
+          .split(",")
+          .map((query) => query.trim().toLowerCase());
+
         // Check if any of the queries match either the item name or the category
         modifiedItems = modifiedItems.filter((item) =>
-          queries.some(query =>
-            item.item.toLowerCase().includes(query) ||   // Matches item name
-            item.category.toLowerCase().includes(query) || // Matches category
-            item.location.toLowerCase().includes(query) ||//Matches location
-            item.department.toLowerCase().includes(query)
+          queries.some(
+            (query) =>
+              item.item.toLowerCase().includes(query) || // Matches item name
+              item.category.toLowerCase().includes(query) || // Matches category
+              item.location.toLowerCase().includes(query) || //Matches location
+              item.department.toLowerCase().includes(query)
           )
         );
       }
@@ -171,10 +201,10 @@ export default function DashAnalytics() {
         const [startDate, endDate] = filters.dateRange;
         const start = startDate ? new Date(startDate) : null;
         const end = endDate ? new Date(endDate) : null;
-        
+
         modifiedItems = modifiedItems.filter((item) => {
           // Convert displayDate (string) back to a Date object for comparison
-          const itemDate = new Date(item.displayDate);  // Convert displayDate (e.g., "09/21/2023") to a Date object
+          const itemDate = new Date(item.displayDate);
 
           // Check if itemDate (parsed from displayDate) is within the range
           return (!start || itemDate >= start) && (!end || itemDate <= end);
@@ -219,7 +249,10 @@ export default function DashAnalytics() {
 
       // Admin users should only count users in their department
       if (currentUser.role === "admin") {
-        filteredUsers = users.filter(user => user.department === currentUser.department && user.role === "staff");
+        filteredUsers = users.filter(
+          (user) =>
+            user.department === currentUser.department && user.role === "staff"
+        );
       }
 
       // Set the total users based on the filtered users
@@ -229,7 +262,7 @@ export default function DashAnalytics() {
 
   const fetchAllUsers = async () => {
     try {
-      const res = await fetch('/api/users'); // Fetch all users from the backend
+      const res = await fetch("/api/users"); // Fetch all users from the backend
       if (res.ok) {
         const data = await res.json();
         setUsers(data); // Store all users
@@ -404,7 +437,9 @@ export default function DashAnalytics() {
                   </Table.Cell>
                   <Table.Cell>{item.item}</Table.Cell>
                   <Table.Cell>
-                    {new Date(item.createdAt || item.dateFound).toLocaleDateString()}
+                    {new Date(
+                      item.createdAt || item.dateFound
+                    ).toLocaleDateString()}
                   </Table.Cell>
                 </Table.Row>
               ))}
@@ -482,112 +517,124 @@ export default function DashAnalytics() {
           </Button>
         </div>
         <div className="w-full overflow-x-auto">
-        <br></br>
-        <Table
-          hoverable
-          className="min-w-full text-sm text-left text-gray-500 dark:text-gray-400"
-        >
-          <Table.Head>
-            <Table.HeadCell className="px-6">
-              {filters.action && filters.action.length > 0
-                ? filters.action.join("/ ") // Join multiple actions with commas
-                : "Action"}{" "}
-              {/* Default to "Action" if no filter is selected */}
-            </Table.HeadCell>
-            <Table.HeadCell className="px-2">
-              {filters.dateRange && filters.dateRange.length === 2
-                ? filters.dateRange[0] && !filters.dateRange[1] // Only start date selected
-                  ? new Date(
-                      new Date(filters.dateRange[0]).setDate(
-                        new Date(filters.dateRange[0]).getDate() + 1
-                      )
-                    ).toLocaleDateString("en-GB") // Show day before for start date
-                  : !filters.dateRange[0] && filters.dateRange[1] // Only end date selected
-                  ? new Date(filters.dateRange[1]).toLocaleDateString("en-GB") // Format end date
-                  : filters.dateRange[0] && filters.dateRange[1] && filters.dateRange[0] === filters.dateRange[1] // Both dates selected but are the same
-                  ? new Date(
-                      new Date(filters.dateRange[0]).setDate(
-                        new Date(filters.dateRange[0]).getDate() + 1
-                      )
-                    ).toLocaleDateString("en-GB") // Show day before if same
-                  : filters.dateRange[0] && filters.dateRange[1] // Both start and end date selected
-                  ? `${new Date(
-                      new Date(filters.dateRange[0]).setDate(
-                        new Date(filters.dateRange[0]).getDate() + 1
-                      )
-                    ).toLocaleDateString("en-GB")} - ${new Date(
-                      filters.dateRange[1]
-                    ).toLocaleDateString("en-GB")}` // Show adjusted start and regular end date
-                  : "Date" // Default to "Date" if no valid dates are selected
-                : "Date" // Default to "Date" if no filter is selected
-              }
-            </Table.HeadCell>
-            <Table.HeadCell className="px-2">Time</Table.HeadCell>
-            <Table.HeadCell className="px-2">Item Name</Table.HeadCell>
-            <Table.HeadCell>Image</Table.HeadCell>
-            <Table.HeadCell className="px-2">Description</Table.HeadCell>
-            <Table.HeadCell className="px-2">Department Surrendered</Table.HeadCell>
-            <Table.HeadCell className="px-2">Location Found</Table.HeadCell>
-            <Table.HeadCell className="px-2">Category</Table.HeadCell>            
-            <Table.HeadCell className="px-2">Turnover Person</Table.HeadCell>
-            <Table.HeadCell className="px-2">Turnover Date</Table.HeadCell>
-          </Table.Head>
-          <Table.Body className="bg-white divide-y dark:divide-gray-700 dark:bg-gray-800">
-            {[...items].map((item, index) => (
-              <Table.Row
-                key={item.key || index}
-                className="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-600"
-              >
-                <Table.Cell className="px-6 py-4">{item.action}</Table.Cell>
-                <Table.Cell className="px-2 py-4">
-                  {item.displayDate}
-                </Table.Cell>
-                <Table.Cell className="px-2 py-4">
-                  {item.displayTime}
-                </Table.Cell>
-                <Table.Cell className="px-2 py-4">
-                  <Link to={`/item/${item.id}`}>{item.item}</Link>
-                </Table.Cell>
-                <Table.Cell className="px-2 py-4">
-                  {item.imageUrls && item.imageUrls[0] ? (
-                    <img
-                      src={item.imageUrls[0]}
-                      alt={item.item}
-                      className="w-12 h-12 rounded-md object-cover object-center"
-                      onError={(e) => {
-                        e.target.onError = null; // Prevents looping
-                        e.target.src = "/default-image.png"; // Specify your default image URL here
-                      }}
-                    />
-                  ) : (
-                    <img
-                      src="/default-image.png" // Specify your default image URL here
-                      alt="Default"
-                      className="w-12 h-12 rounded-md object-cover object-center"
-                    />
-                  )}
-                </Table.Cell>
-                <Table.Cell className="px-2 py-4">
-                  {item.description}
-                </Table.Cell>
-                <Table.Cell className="px-2 py-4">{item.department}</Table.Cell>
-                <Table.Cell className="px-2 py-4">{item.location}</Table.Cell>
-                <Table.Cell className="px-2 py-4">{item.category}</Table.Cell>
-                <Table.Cell className="px-2 py-4">{item.turnoverPerson}</Table.Cell>
-                <Table.Cell className="px-2 py-4">{item.turnoverDate}</Table.Cell>
-              </Table.Row>
-            ))}
-          </Table.Body>
-        </Table>
-        <FilterModal
-          show={showFilterModal}
-          onClose={() => setShowFilterModal(false)}
-          onApplyFilters={applyFilters} 
-          clearFilters={clearFilters}
-        />
+          <br></br>
+          <Table
+            hoverable
+            className="min-w-full text-sm text-left text-gray-500 dark:text-gray-400"
+          >
+            <Table.Head>
+              <Table.HeadCell className="px-6">
+                {filters.action && filters.action.length > 0
+                  ? filters.action.join("/ ") // Join multiple actions with commas
+                  : "Action"}{" "}
+                {/* Default to "Action" if no filter is selected */}
+              </Table.HeadCell>
+              <Table.HeadCell className="px-2">
+                {
+                  filters.dateRange && filters.dateRange.length === 2
+                    ? filters.dateRange[0] && !filters.dateRange[1] // Only start date selected
+                      ? new Date(
+                          new Date(filters.dateRange[0]).setDate(
+                            new Date(filters.dateRange[0]).getDate() + 1
+                          )
+                        ).toLocaleDateString("en-GB") // Show day before for start date
+                      : !filters.dateRange[0] && filters.dateRange[1] // Only end date selected
+                      ? new Date(filters.dateRange[1]).toLocaleDateString(
+                          "en-GB"
+                        ) // Format end date
+                      : filters.dateRange[0] &&
+                        filters.dateRange[1] &&
+                        filters.dateRange[0] === filters.dateRange[1] // Both dates selected but are the same
+                      ? new Date(
+                          new Date(filters.dateRange[0]).setDate(
+                            new Date(filters.dateRange[0]).getDate() + 1
+                          )
+                        ).toLocaleDateString("en-GB") // Show day before if same
+                      : filters.dateRange[0] && filters.dateRange[1] // Both start and end date selected
+                      ? `${new Date(
+                          new Date(filters.dateRange[0]).setDate(
+                            new Date(filters.dateRange[0]).getDate() + 1
+                          )
+                        ).toLocaleDateString("en-GB")} - ${new Date(
+                          filters.dateRange[1]
+                        ).toLocaleDateString("en-GB")}` // Show adjusted start and regular end date
+                      : "Date" // Default to "Date" if no valid dates are selected
+                    : "Date" // Default to "Date" if no filter is selected
+                }
+              </Table.HeadCell>
+              <Table.HeadCell className="px-2">Time</Table.HeadCell>
+              <Table.HeadCell className="px-2">Item Name</Table.HeadCell>
+              <Table.HeadCell>Image</Table.HeadCell>
+              <Table.HeadCell className="px-2">Description</Table.HeadCell>
+              <Table.HeadCell className="px-2">
+                Department Surrendered
+              </Table.HeadCell>
+              <Table.HeadCell className="px-2">Location Found</Table.HeadCell>
+              <Table.HeadCell className="px-2">Category</Table.HeadCell>
+              <Table.HeadCell className="px-2">Turnover Person</Table.HeadCell>
+              <Table.HeadCell className="px-2">Turnover Date</Table.HeadCell>
+            </Table.Head>
+            <Table.Body className="bg-white divide-y dark:divide-gray-700 dark:bg-gray-800">
+              {[...items].map((item, index) => (
+                <Table.Row
+                  key={item.key || index}
+                  className="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-600"
+                >
+                  <Table.Cell className="px-6 py-4">{item.action}</Table.Cell>
+                  <Table.Cell className="px-2 py-4">
+                    {item.displayDate}
+                  </Table.Cell>
+                  <Table.Cell className="px-2 py-4">
+                    {item.displayTime}
+                  </Table.Cell>
+                  <Table.Cell className="px-2 py-4">
+                    <Link to={`/item/${item.id}`}>{item.item}</Link>
+                  </Table.Cell>
+                  <Table.Cell className="px-2 py-4">
+                    {item.imageUrls && item.imageUrls[0] ? (
+                      <img
+                        src={item.imageUrls[0]}
+                        alt={item.item}
+                        className="w-12 h-12 rounded-md object-cover object-center"
+                        onError={(e) => {
+                          e.target.onError = null; // Prevents looping
+                          e.target.src = "/default-image.png"; // Specify your default image URL here
+                        }}
+                      />
+                    ) : (
+                      <img
+                        src="/default-image.png" // Specify your default image URL here
+                        alt="Default"
+                        className="w-12 h-12 rounded-md object-cover object-center"
+                      />
+                    )}
+                  </Table.Cell>
+                  <Table.Cell className="px-2 py-4">
+                    {item.description}
+                  </Table.Cell>
+                  <Table.Cell className="px-2 py-4">
+                    {item.department}
+                  </Table.Cell>
+                  <Table.Cell className="px-2 py-4">{item.location}</Table.Cell>
+                  <Table.Cell className="px-2 py-4">{item.category}</Table.Cell>
+                  <Table.Cell className="px-2 py-4">
+                    {item.turnoverPerson}
+                  </Table.Cell>
+                  <Table.Cell className="px-2 py-6">
+                    {item.turnoverDate}
+                  </Table.Cell>
+                </Table.Row>
+              ))}
+            </Table.Body>
+          </Table>
+          <FilterModal
+            show={showFilterModal}
+            onClose={() => setShowFilterModal(false)}
+            onApplyFilters={applyFilters}
+            clearFilters={clearFilters}
+          />
         </div>
       </div>
     </div>
-    
   );
 }
