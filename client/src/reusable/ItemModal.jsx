@@ -1,5 +1,13 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { Modal, TextInput, Button, Alert, FileInput } from "flowbite-react";
+import {
+  Modal,
+  TextInput,
+  Button,
+  Radio,
+  Label,
+  FileInput,
+  Alert,
+} from "flowbite-react";
 import { HiOutlineTrash } from "react-icons/hi";
 import Webcam from "react-webcam";
 import { useSelector } from "react-redux";
@@ -10,9 +18,8 @@ import {
   getDownloadURL,
 } from "firebase/storage";
 import { app } from "../firebase";
-import { offices, categories } from "../reusable/constant.js"; // Import office and category options
-import Select from "react-select"; // Import react-select
-import { format, parseISO } from "date-fns"; // Import date-fns
+import { offices, categories } from "../reusable/constant.js";
+import { format, parseISO } from "date-fns";
 
 const ItemModal = ({ isOpen, onClose, onSave, itemToEdit }) => {
   const [files, setFiles] = useState([]);
@@ -30,8 +37,10 @@ const ItemModal = ({ isOpen, onClose, onSave, itemToEdit }) => {
     status: "Available",
     claimantName: "",
     claimedDate: "",
-    department: currentUser?.department || "SSO", // Use currentUser's department or default to SSO
+    department: "SSO",
     userRef: currentUser?.id,
+    foundByName: "",
+    staffInvolved: "",
   });
   const webcamRef = useRef(null);
   const [showWebcam, setShowWebcam] = useState(false);
@@ -52,10 +61,10 @@ const ItemModal = ({ isOpen, onClose, onSave, itemToEdit }) => {
           status: itemToEdit.status || "Available",
           claimantName: itemToEdit.claimantName || "",
           claimedDate: itemToEdit.claimedDate || "",
-          department: itemToEdit.department || currentUser?.department || "SSO", // Preserve department
+          department: itemToEdit.department || "SSO",
           userRef: itemToEdit.userRef || currentUser?.id,
-          turnoverDate: itemToEdit.turnoverDate || "",
-          turnoverPerson: itemToEdit.turnoverPerson || "",
+          foundByName: itemToEdit.foundByName || "",
+          staffInvolved: itemToEdit.staffInvolved || "",
         });
       } else {
         resetForm();
@@ -66,7 +75,7 @@ const ItemModal = ({ isOpen, onClose, onSave, itemToEdit }) => {
   const resetForm = () => {
     setFormData({
       item: "",
-      dateFound: "", // Clear the dateFound field
+      dateFound: "",
       location: "",
       description: "",
       imageUrls: [],
@@ -74,8 +83,10 @@ const ItemModal = ({ isOpen, onClose, onSave, itemToEdit }) => {
       status: "Available",
       claimantName: "",
       claimedDate: "",
-      department: currentUser?.department || "SSO", // Use currentUser's department or default to SSO
+      department: "SSO",
       userRef: currentUser?.id,
+      foundByName: "",
+      staffInvolved: "",
     });
     setFiles([]);
     setWebcamImage(null);
@@ -93,22 +104,16 @@ const ItemModal = ({ isOpen, onClose, onSave, itemToEdit }) => {
     setFormData((prevData) => ({ ...prevData, [name]: value }));
   };
 
-  const handleSelectChange = (selectedOption) => {
-    setFormData((prevData) => ({
-      ...prevData,
-      department: selectedOption.value, // Update department when superAdmin
-    }));
+  const handleRadioChange = (e) => {
+    setFormData((prevData) => ({ ...prevData, department: e.target.value }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Preserve dateFound and set updatedAt automatically
     const updatedFormData = {
       ...formData,
-      updatedAt: new Date().toISOString(), // Automatically set the updatedAt field to the current time
-      turnoverDate: formData.turnoverDate, // Preserve turnoverDate
-      turnoverPerson: formData.turnoverPerson, // Preserve turnoverPerson
+      updatedAt: new Date().toISOString(),
     };
 
     try {
@@ -207,12 +212,6 @@ const ItemModal = ({ isOpen, onClose, onSave, itemToEdit }) => {
     }
   }, [isOpen]);
 
-  // Prepare department options for react-select
-  const departmentOptions = offices.map((office) => ({
-    value: office,
-    label: office,
-  }));
-
   return (
     <Modal show={isOpen} onClose={onClose} size="2xl">
       <Modal.Header>{itemToEdit ? "Edit Item" : "Add New Item"}</Modal.Header>
@@ -230,9 +229,45 @@ const ItemModal = ({ isOpen, onClose, onSave, itemToEdit }) => {
                 type="text"
                 name="item"
                 id="item"
-                className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
+                className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5"
                 placeholder="Item Name"
                 value={formData.item}
+                onChange={handleChange}
+                required
+              />
+            </div>
+            <div className="col-span-6 sm:col-span-3">
+              <label
+                htmlFor="foundByName"
+                className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+              >
+                Found By
+              </label>
+              <input
+                type="text"
+                name="foundByName"
+                id="foundByName"
+                className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5"
+                placeholder="Found By"
+                value={formData.foundByName}
+                onChange={handleChange}
+                required
+              />
+            </div>
+            <div className="col-span-6 sm:col-span-3">
+              <label
+                htmlFor="staffInvolved"
+                className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+              >
+                Staff Involved
+              </label>
+              <input
+                type="text"
+                name="staffInvolved"
+                id="staffInvolved"
+                className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5"
+                placeholder="Staff Involved"
+                value={formData.staffInvolved}
                 onChange={handleChange}
                 required
               />
@@ -248,14 +283,13 @@ const ItemModal = ({ isOpen, onClose, onSave, itemToEdit }) => {
                 type="datetime-local"
                 name="dateFound"
                 id="dateFound"
-                className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
+                className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5"
                 value={formData.dateFound}
                 onChange={handleChange}
                 required
-                disabled={!!itemToEdit} // Disable editing of the date when modifying an item
+                disabled={!!itemToEdit}
               />
             </div>
-
             <div className="col-span-6 sm:col-span-3">
               <label
                 htmlFor="location"
@@ -267,7 +301,7 @@ const ItemModal = ({ isOpen, onClose, onSave, itemToEdit }) => {
                 type="text"
                 name="location"
                 id="location"
-                className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
+                className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5"
                 placeholder="Location"
                 value={formData.location}
                 onChange={handleChange}
@@ -284,7 +318,7 @@ const ItemModal = ({ isOpen, onClose, onSave, itemToEdit }) => {
               <select
                 name="category"
                 id="category"
-                className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
+                className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5"
                 value={formData.category}
                 onChange={handleChange}
               >
@@ -307,14 +341,12 @@ const ItemModal = ({ isOpen, onClose, onSave, itemToEdit }) => {
                 id="description"
                 value={formData.description}
                 onChange={handleChange}
-                className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
+                className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5"
                 placeholder="Description"
-                rows={4} // Adjust the 'rows' value to make the text area bigger (e.g., 4, 6, 8)
+                rows={4}
                 required
               />
             </div>
-
-            {/* Office Stored (Department) */}
             <div className="col-span-6 sm:col-span-3">
               <label
                 htmlFor="department"
@@ -322,27 +354,32 @@ const ItemModal = ({ isOpen, onClose, onSave, itemToEdit }) => {
               >
                 Office Stored
               </label>
-              {currentUser.role === "superAdmin" && !itemToEdit ? (
-                <Select
-                  options={departmentOptions}
-                  value={departmentOptions.find(
-                    (option) => option.value === formData.department
-                  )}
-                  onChange={handleSelectChange}
-                  isSearchable
-                />
-              ) : (
+              {itemToEdit ? (
                 <TextInput
                   name="department"
                   id="department"
                   value={formData.department}
-                  readOnly
-                  className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
+                  disabled
+                  className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5"
                 />
+              ) : (
+                <div className="flex flex-col">
+                  {offices.map((office) => (
+                    <div key={office} className="flex items-center mb-2">
+                      <Radio
+                        id={office}
+                        name="department"
+                        value={office}
+                        checked={formData.department === office}
+                        onChange={handleRadioChange}
+                        className="mr-2"
+                      />
+                      <Label htmlFor={office}>{office}</Label>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
-
-            {/* Image Upload Section */}
             <div className="col-span-6">
               <label
                 htmlFor="imageUrls"
@@ -362,7 +399,7 @@ const ItemModal = ({ isOpen, onClose, onSave, itemToEdit }) => {
                 type="button"
                 gradientDuoTone="pinkToOrange"
                 onClick={handleImageSubmit}
-                disabled={files.length === 0} // Disable button if no files selected
+                disabled={files.length === 0}
                 className="mt-2"
               >
                 Upload Images

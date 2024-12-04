@@ -283,176 +283,157 @@ export default function DashItems() {
       </div>
 
       <div className="container mx-auto p-3 scrollbar overflow-x-auto">
-        <Table
-          hoverable
-          className="min-w-full text-sm text-left text-gray-500 dark:text-gray-400"
-        >
-          <Table.Head className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
-            <Table.HeadCell>Item Name</Table.HeadCell>
-            <Table.HeadCell>Image</Table.HeadCell>
-            <Table.HeadCell>Description</Table.HeadCell>
-            <Table.HeadCell>Location</Table.HeadCell>
-            <Table.HeadCell>Category</Table.HeadCell>
-            <Table.HeadCell>Date Found</Table.HeadCell>
-            <Table.HeadCell>Office Stored</Table.HeadCell>
-            <Table.HeadCell>Status</Table.HeadCell>
-            {filter === "Claimed Items" && (
-              <>
-                <Table.HeadCell>Claimant</Table.HeadCell>
-                <Table.HeadCell>Claimant Image</Table.HeadCell>
-                <Table.HeadCell>Claimed Date</Table.HeadCell>
-              </>
-            )}
-            {filter === "Unclaimed Items" && (
-              <>
-                <Table.HeadCell>Turnover Date</Table.HeadCell>
-                <Table.HeadCell>Turnover Person</Table.HeadCell>
-              </>
-            )}
-            {filter === "Unclaimed Items" && (
-              <Table.HeadCell>Actions</Table.HeadCell>
-            )}
-          </Table.Head>
+      <Table hoverable className="min-w-full text-sm text-left text-gray-500 dark:text-gray-400">
+  <Table.Head className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+    <Table.HeadCell>Item Name</Table.HeadCell>
+    <Table.HeadCell>Image</Table.HeadCell>
+    <Table.HeadCell>Description</Table.HeadCell>
+    <Table.HeadCell>Location</Table.HeadCell>
+    <Table.HeadCell>Category</Table.HeadCell>
+    <Table.HeadCell>Date Found</Table.HeadCell>
+    <Table.HeadCell>Office Stored</Table.HeadCell>
+    <Table.HeadCell>Found By</Table.HeadCell>
+    <Table.HeadCell>Office Staff</Table.HeadCell>
+    <Table.HeadCell>Turnover Date</Table.HeadCell> {/* Added column */}
+    <Table.HeadCell>Turnover Person</Table.HeadCell> {/* Added column */}
+    {filter === "Claimed Items" && (
+      <>
+        <Table.HeadCell>Claimant</Table.HeadCell>
+        <Table.HeadCell>Claimant Image</Table.HeadCell>
+        <Table.HeadCell>Claimed Date</Table.HeadCell>
+      </>
+    )}
+    {filter === "Unclaimed Items" && <Table.HeadCell>Actions</Table.HeadCell>}
+  </Table.Head>
 
-          <Table.Body className="bg-white divide-y dark:divide-gray-700 dark:bg-gray-800">
-            {sortedItems.map((item) => (
-              <Table.Row
-                key={item.id}
-                className="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-600"
+  <Table.Body className="bg-white divide-y dark:divide-gray-700 dark:bg-gray-800">
+    {sortedItems.map((item) => (
+      <Table.Row
+        key={item.id}
+        className="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-600"
+      >
+        <Table.Cell className="px-6 py-4">{item.item}</Table.Cell>
+        <Table.Cell className="px-6 py-4">
+          {item.imageUrls && item.imageUrls[0] ? (
+            <img
+              src={item.imageUrls[0]}
+              alt={item.item}
+              className="w-24 h-24 rounded-md object-cover object-center"
+            />
+          ) : (
+            <img
+              src="/default-image.png"
+              alt="Default"
+              className="w-24 h-24 rounded-md object-cover object-center"
+            />
+          )}
+        </Table.Cell>
+        <Table.Cell className="px-6 py-4">{item.description}</Table.Cell>
+        <Table.Cell className="px-6 py-4">{item.location}</Table.Cell>
+        <Table.Cell className="px-6 py-4">{item.category}</Table.Cell>
+        <Table.Cell className="px-6 py-4">
+          {item.dateFound
+            ? new Date(item.dateFound).toLocaleDateString("en-US", {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              })
+            : "-"}
+        </Table.Cell>
+        <Table.Cell className="px-6 py-4">{item.department || "-"}</Table.Cell>
+        <Table.Cell className="px-6 py-4">{item.foundByName || "N/A"}</Table.Cell>
+        <Table.Cell className="px-6 py-4">{item.staffInvolved || "N/A"}</Table.Cell>
+
+        {/* Turnover Date */}
+        <Table.Cell className="px-6 py-4">
+          {item.turnoverDate
+            ? new Date(item.turnoverDate).toLocaleDateString("en-US", {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              })
+            : "N/A"}
+        </Table.Cell>
+
+        {/* Turnover Person */}
+        <Table.Cell className="px-6 py-4">{item.turnoverPerson || "N/A"}</Table.Cell>
+
+        {filter === "Claimed Items" && (
+          <>
+            <Table.Cell className="px-6 py-4">{item.claimantName}</Table.Cell>
+            <Table.Cell className="px-6 py-4">
+              {item.claimantImage && (
+                <img
+                  src={item.claimantImage}
+                  alt="Claimant"
+                  className="w-24 h-24 rounded-md object-cover object-center cursor-pointer"
+                  onClick={() => {
+                    setCurrentImageUrl(item.claimantImage);
+                    setImageModalOpen(true);
+                  }}
+                />
+              )}
+            </Table.Cell>
+            <Table.Cell className="px-6 py-4">
+              {item.claimedDate
+                ? new Date(item.claimedDate).toLocaleDateString("en-US", {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                  })
+                : "-"}
+            </Table.Cell>
+          </>
+        )}
+
+        {filter === "Unclaimed Items" && item.status === "Available" && (
+          <Table.Cell className="px-6 py-4">
+            <div className="flex items-center space-x-2">
+              {/* Edit Button */}
+              <Button
+                color="blue"
+                onClick={() => {
+                  setItemToEdit(item);
+                  setIsModalOpen(true);
+                }}
               >
-                <Table.Cell className="px-6 py-4">{item.item}</Table.Cell>
-                <Table.Cell className="px-0 py-4">
-                  {item.imageUrls && item.imageUrls[0] ? (
-                    <img
-                      src={item.imageUrls[0]}
-                      alt={item.item}
-                      className="w-24 h-24 rounded-md object-cover object-center"
-                      onError={(e) => {
-                        e.target.onError = null; // Prevents looping
-                        e.target.src = "/default-image.png"; // Specify your default image URL here
-                      }}
-                    />
-                  ) : (
-                    <img
-                      src="/default-image.png" // Specify your default image URL here
-                      alt="Default"
-                      className="w-24 h-24 rounded-md object-cover object-center"
-                    />
-                  )}
-                </Table.Cell>
+                <HiPencilAlt className="w-4 h-4" />
+              </Button>
 
-                <Table.Cell className="px-6 py-4">
-                  {item.description}
-                </Table.Cell>
-                <Table.Cell className="px-6 py-4">{item.location}</Table.Cell>
-                <Table.Cell className="px-6 py-4">{item.category}</Table.Cell>
-                <Table.Cell className="px-6 py-4">
-                  {item.dateFound
-                    ? new Date(item.dateFound).toLocaleDateString("en-US", {
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                      })
-                    : "-"}
-                </Table.Cell>
+              {/* Delete Button */}
+              <Button
+                color="failure"
+                onClick={() => {
+                  setItemToDelete(item);
+                  setShowDeleteModal(true);
+                }}
+              >
+                <HiTrash className="w-4 h-4" />
+              </Button>
 
-                <Table.Cell className="px-6 py-4">
-                  {item.department || "-"}
-                </Table.Cell>
-                <Table.Cell className="px-6 py-4">{item.status}</Table.Cell>
+              {/* Turnover Button */}
+              <Button
+                color="purple"
+                onClick={() => {
+                  setItemToEdit(item);
+                  setIsTurnoverModalOpen(true);
+                }}
+              >
+                <HiSwitchHorizontal className="w-4 h-4" />
+              </Button>
+            </div>
+          </Table.Cell>
+        )}
 
-                {filter === "Claimed Items" && (
-                  <>
-                    <Table.Cell className="px-6 py-4">
-                      {item.claimantName}
-                    </Table.Cell>
-                    <Table.Cell className="px-3 py-4">
-                      {item.claimantImage && (
-                        <img
-                          src={item.claimantImage}
-                          alt="Claimant"
-                          className="w-24 h-24 rounded-md object-cover object-center cursor-pointer"
-                          onClick={() => {
-                            setCurrentImageUrl(item.claimantImage);
-                            setImageModalOpen(true);
-                          }}
-                        />
-                      )}
-                    </Table.Cell>
-                    <Table.Cell className="px-2 py-4">
-                      {item.claimedDate
-                        ? new Date(item.claimedDate).toLocaleDateString(
-                            "en-US",
-                            {
-                              year: "numeric",
-                              month: "long",
-                              day: "numeric",
-                            }
-                          )
-                        : "-"}
-                    </Table.Cell>
-                  </>
-                )}
+        {(filter !== "Unclaimed Items" || item.status !== "Available") && (
+          <Table.Cell colSpan={1} className="hidden" />
+        )}
+      </Table.Row>
+    ))}
+  </Table.Body>
+</Table>
 
-                {filter === "Unclaimed Items" && (
-                  <>
-                    <Table.Cell className="px-6 py-4">
-                      {item.turnoverDate
-                        ? new Date(item.turnoverDate).toLocaleDateString()
-                        : "-"}
-                    </Table.Cell>
-                    <Table.Cell className="px-6 py-4">
-                      {item.turnoverPerson || "-"}
-                    </Table.Cell>
-                  </>
-                )}
 
-                {filter === "Unclaimed Items" &&
-                  item.status === "Available" && (
-                    <Table.Cell className="px-0 py-4">
-                      <div className="flex items-center justify-center space-x-1">
-                        <Button
-                          color="blue"
-                          onClick={() => {
-                            setItemToEdit(item);
-                            setIsModalOpen(true);
-                          }}
-                        >
-                          <HiPencilAlt className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          color="failure"
-                          onClick={() => {
-                            setItemToDelete(item);
-                            setShowDeleteModal(true);
-                          }}
-                        >
-                          <HiTrash className="w-4 h-4" />
-                        </Button>
-                        {/* Add Turnover Button */}
-                        <Button
-                          color="purple"
-                          onClick={() => {
-                            console.log("Editing item:", item); // Add this line to debug
-                            setItemToEdit(item);
-                            // Open turnover modal (we'll create it soon)
-                            setIsTurnoverModalOpen(true);
-                          }}
-                        >
-                          <HiSwitchHorizontal className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </Table.Cell>
-                  )}
-
-                {(filter !== "Unclaimed Items" ||
-                  item.status !== "Available") && (
-                  <Table.Cell colSpan={1} className="hidden" />
-                )}
-              </Table.Row>
-            ))}
-          </Table.Body>
-        </Table>
       </div>
 
       <Modal show={isImageModalOpen} onClose={() => setImageModalOpen(false)}>
