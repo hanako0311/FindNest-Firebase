@@ -21,7 +21,7 @@
     "flowbite": "^2.3.0",
     "flowbite-react": "^0.8.0",
     "js-file-download": "^0.4.12",
-    "mongoose": "^8.5.2",
+    "mongoose": "^8.9.2",
     "papaparse": "^5.4.1",
     "react": "^18.2.0",
     "react-apexcharts": "^1.4.1",

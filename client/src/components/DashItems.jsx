@@ -295,18 +295,16 @@ export default function DashItems() {
             <Table.HeadCell>Category</Table.HeadCell>
             <Table.HeadCell>Date Found</Table.HeadCell>
             <Table.HeadCell>Office Stored</Table.HeadCell>
-            <Table.HeadCell>Status</Table.HeadCell>
+            <Table.HeadCell>Found By</Table.HeadCell>
+            <Table.HeadCell>Office Staff</Table.HeadCell>
+            <Table.HeadCell>Turnover Date</Table.HeadCell> {/* Added column */}
+            <Table.HeadCell>Turnover Person</Table.HeadCell>{" "}
+            {/* Added column */}
             {filter === "Claimed Items" && (
               <>
                 <Table.HeadCell>Claimant</Table.HeadCell>
                 <Table.HeadCell>Claimant Image</Table.HeadCell>
                 <Table.HeadCell>Claimed Date</Table.HeadCell>
-              </>
-            )}
-            {filter === "Unclaimed Items" && (
-              <>
-                <Table.HeadCell>Turnover Date</Table.HeadCell>
-                <Table.HeadCell>Turnover Person</Table.HeadCell>
               </>
             )}
             {filter === "Unclaimed Items" && (
@@ -321,22 +319,18 @@ export default function DashItems() {
                 className="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-600"
               >
                 <Table.Cell className="px-6 py-4">{item.item}</Table.Cell>
-                <Table.Cell className="px-0 py-4">
+                <Table.Cell className="px-1 py-4">
                   {item.imageUrls && item.imageUrls[0] ? (
                     <img
                       src={item.imageUrls[0]}
                       alt={item.item}
-                      className="w-24 h-24 rounded-md object-cover object-center"
-                      onError={(e) => {
-                        e.target.onError = null; // Prevents looping
-                        e.target.src = "/default-image.png"; // Specify your default image URL here
-                      }}
+                      className="w-24 h-24 rounded-md  object-center" // Increased size and added object-contain
                     />
                   ) : (
                     <img
-                      src="/default-image.png" // Specify your default image URL here
+                      src="/default-image.png"
                       alt="Default"
-                      className="w-24 h-24 rounded-md object-cover object-center"
+                      className="w-24 h-24 rounded-md  object-center" // Increased size and added object-contain
                     />
                   )}
                 </Table.Cell>
@@ -355,18 +349,38 @@ export default function DashItems() {
                       })
                     : "-"}
                 </Table.Cell>
-
                 <Table.Cell className="px-6 py-4">
                   {item.department || "-"}
                 </Table.Cell>
-                <Table.Cell className="px-6 py-4">{item.status}</Table.Cell>
+                <Table.Cell className="px-6 py-4">
+                  {item.foundByName || "-"}
+                </Table.Cell>
+                <Table.Cell className="px-6 py-4">
+                  {item.staffInvolved || "-"}
+                </Table.Cell>
+
+                {/* Turnover Date */}
+                <Table.Cell className="px-6 py-4">
+                  {item.turnoverDate
+                    ? new Date(item.turnoverDate).toLocaleDateString("en-US", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      })
+                    : "-"}
+                </Table.Cell>
+
+                {/* Turnover Person */}
+                <Table.Cell className="px-6 py-4">
+                  {item.turnoverPerson || "-"}
+                </Table.Cell>
 
                 {filter === "Claimed Items" && (
                   <>
                     <Table.Cell className="px-6 py-4">
                       {item.claimantName}
                     </Table.Cell>
-                    <Table.Cell className="px-3 py-4">
+                    <Table.Cell className="px-6 py-4">
                       {item.claimantImage && (
                         <img
                           src={item.claimantImage}
@@ -379,7 +393,7 @@ export default function DashItems() {
                         />
                       )}
                     </Table.Cell>
-                    <Table.Cell className="px-2 py-4">
+                    <Table.Cell className="px-6 py-4">
                       {item.claimedDate
                         ? new Date(item.claimedDate).toLocaleDateString(
                             "en-US",
@@ -394,23 +408,11 @@ export default function DashItems() {
                   </>
                 )}
 
-                {filter === "Unclaimed Items" && (
-                  <>
-                    <Table.Cell className="px-6 py-4">
-                      {item.turnoverDate
-                        ? new Date(item.turnoverDate).toLocaleDateString()
-                        : "-"}
-                    </Table.Cell>
-                    <Table.Cell className="px-6 py-4">
-                      {item.turnoverPerson || "-"}
-                    </Table.Cell>
-                  </>
-                )}
-
                 {filter === "Unclaimed Items" &&
                   item.status === "Available" && (
-                    <Table.Cell className="px-0 py-4">
-                      <div className="flex items-center justify-center space-x-1">
+                    <Table.Cell className="px-6 py-4">
+                      <div className="flex items-center space-x-2">
+                        {/* Edit Button */}
                         <Button
                           color="blue"
                           onClick={() => {
@@ -420,6 +422,8 @@ export default function DashItems() {
                         >
                           <HiPencilAlt className="w-4 h-4" />
                         </Button>
+
+                        {/* Delete Button */}
                         <Button
                           color="failure"
                           onClick={() => {
@@ -429,13 +433,12 @@ export default function DashItems() {
                         >
                           <HiTrash className="w-4 h-4" />
                         </Button>
-                        {/* Add Turnover Button */}
+
+                        {/* Turnover Button */}
                         <Button
                           color="purple"
                           onClick={() => {
-                            console.log("Editing item:", item); // Add this line to debug
                             setItemToEdit(item);
-                            // Open turnover modal (we'll create it soon)
                             setIsTurnoverModalOpen(true);
                           }}
                         >

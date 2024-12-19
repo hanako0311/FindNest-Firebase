@@ -13,6 +13,7 @@ import { HiOutlineTrash } from "react-icons/hi";
 import { useNavigate } from "react-router-dom";
 import Webcam from "react-webcam";
 import { useSelector } from "react-redux";
+import { categories } from "../reusable/constant.js";
 
 export default function CreateLostFoundPost() {
   const { currentUser } = useSelector((state) => state.user);
@@ -26,6 +27,8 @@ export default function CreateLostFoundPost() {
     imageUrls: [],
     department: currentUser?.department,
     userRef: currentUser?.id,
+    foundByName: "", // Field for the person who found the item
+    staffInvolved: "", // Text field for staff involved
   });
   const [imageUploadError, setImageUploadError] = useState(false);
   const [reportSubmitError, setReportSubmitError] = useState(null);
@@ -57,9 +60,19 @@ export default function CreateLostFoundPost() {
           setImageUploadError(
             "Image upload failed: Each image must be less than 2MB."
           );
+
+          // Clear the error message after 3000 milliseconds (3 seconds)
+          setTimeout(() => {
+            setImageUploadError(null);
+          }, 3000);
         });
     } else {
-      setImageUploadError("You can only upload up to 5 images per report.");
+      setImageUploadError(
+        "Please select at least one image, but no more than five, to continue."
+      );
+      setTimeout(() => {
+        setImageUploadError(null);
+      }, 3000);
     }
     setFiles([]); // Clear files after upload
     setKey((prevKey) => prevKey + 1); // Increment key to force re-render of file input
@@ -87,6 +100,9 @@ export default function CreateLostFoundPost() {
             })
             .catch((error) => {
               console.error("Failed to get download URL:", error);
+              setTimeout(() => {
+                setImageUploadError(null);
+              }, 3000);
               reject(error);
             });
         }
@@ -118,12 +134,27 @@ export default function CreateLostFoundPost() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Ensure there is at least one image before submitting
+    if (formData.imageUrls.length === 0) {
+      setReportSubmitError(
+        "At least one image is required to submit the form."
+      );
+
+      // Clear the error message after 3000 milliseconds (3 seconds)
+      setTimeout(() => {
+        setReportSubmitError(null);
+      }, 3000);
+
+      return; // Stop the form submission
+    }
+
     try {
       // Ensure all images are uploaded before submission
       if (files.length > 0) {
         handleImageSubmit();
       }
-      
+
       const res = await fetch("/api/items/save", {
         method: "POST",
         headers: {
@@ -131,18 +162,18 @@ export default function CreateLostFoundPost() {
         },
         body: JSON.stringify(formData), // Send the formData including imageUrls
       });
-  
+
       const data = await res.json();
       if (!res.ok) {
         setReportSubmitError(data.message);
         return;
       }
-  
+
       setReportSuccess("Item reported successfully!");
       setReportSubmitError(null);
-  
-      setTimeout(() => navigate("/dashboard?tab=found-items"), 3000); 
-  
+
+      setTimeout(() => navigate("/dashboard?tab=found-items"), 3000);
+
       // Reset the form
       setFormData({
         item: "",
@@ -151,16 +182,20 @@ export default function CreateLostFoundPost() {
         description: "",
         category: "",
         imageUrls: [],
-        department: "", 
+        department: "",
       });
-      setFiles([]); 
+      setFiles([]);
       setKey((prevKey) => prevKey + 1);
     } catch (error) {
       setReportSubmitError("Something went wrong");
       setReportSuccess(null);
+
+      // Clear the error message after 3000 milliseconds (3 seconds)
+      setTimeout(() => {
+        setReportSubmitError(null);
+      }, 3000);
     }
   };
-  
 
   const handleCapture = useCallback(() => {
     const imageSrc = webcamRef.current.getScreenshot();
@@ -188,40 +223,6 @@ export default function CreateLostFoundPost() {
       );
     }
   };
-
-  const categories = [
-    "Mobile Phones",
-    "Laptops/Tablets",
-    "Headphones/Earbuds",
-    "Chargers and Cables",
-    "Cameras",
-    "Electronic Accessories",
-    "Textbooks",
-    "Notebooks",
-    "Stationery Items",
-    "Art Supplies",
-    "Calculators",
-    "Coats and Jackets",
-    "Hats and Caps",
-    "Scarves and Gloves",
-    "Bags and Backpacks",
-    "Sunglasses",
-    "Jewelry and Watches",
-    "Umbrellas",
-    "Wallets and Purses",
-    "ID Cards and Passports",
-    "Keys",
-    "Personal Care Items",
-    "Sports Gear",
-    "Gym Equipment",
-    "Bicycles and Skateboards",
-    "Musical Instruments",
-    "Water Bottles",
-    "Lunch Boxes",
-    "Toys and Games",
-    "Decorative Items",
-    "Other",
-  ];
 
   return (
     <div className="p-3 max-w-3xl mx-auto min-h-screen">
@@ -272,6 +273,26 @@ export default function CreateLostFoundPost() {
               className="w-full p-2.5 text-sm text-gray-900 bg-white border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
             />
           </div>
+        </div>
+        <div className="flex-auto sm:flex-row sm:items-center sm:justify-between">
+          <TextInput
+            type="text"
+            placeholder="Name of the person who found the item"
+            required
+            name="foundByName"
+            onChange={handleChange}
+            value={formData.foundByName}
+          />
+        </div>
+        <div className="flex-auto sm:flex-row sm:items-center sm:justify-between">
+          <TextInput
+            type="text"
+            placeholder="Enter staff name"
+            required
+            name="staffInvolved"
+            onChange={handleChange}
+            value={formData.staffInvolved}
+          />
         </div>
         <textarea
           className="block w-full p-2.5 text-sm text-gray-900 bg-white border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"

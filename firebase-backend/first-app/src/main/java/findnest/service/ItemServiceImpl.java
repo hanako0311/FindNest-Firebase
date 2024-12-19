@@ -35,6 +35,14 @@ public class ItemServiceImpl implements ItemService {
         item.setUpdatedAt(timestamp);
         item.setStatus("Available");
 
+        // Ensure `foundByName` and `staffInvolved` are initialized if null
+        if (item.getFoundByName() == null || item.getFoundByName().isEmpty()) {
+            item.setFoundByName("Unknown");
+        }
+        if (item.getStaffInvolved() == null || item.getStaffInvolved().isEmpty()) {
+            item.setStaffInvolved("Unassigned");
+        }
+
         dbRef.child(id).setValueAsync(item);
 
         return item;
@@ -98,52 +106,57 @@ public class ItemServiceImpl implements ItemService {
     }
 
     @Override
-public Items updateItem(String id, Items updatedItem) {
-    CompletableFuture<Items> future = new CompletableFuture<>();
+    public Items updateItem(String id, Items updatedItem) {
+        CompletableFuture<Items> future = new CompletableFuture<>();
 
-    dbRef.child(id).addListenerForSingleValueEvent(new ValueEventListener() {
-        @Override
-        public void onDataChange(DataSnapshot snapshot) {
-            if (snapshot.exists()) {
-                Items existingItem = snapshot.getValue(Items.class);
-                if (existingItem != null) {
-                    // Preserve the turnover fields if they are not being updated
-                    if (updatedItem.getTurnoverDate() == null) {
-                        updatedItem.setTurnoverDate(existingItem.getTurnoverDate());
+        dbRef.child(id).addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot snapshot) {
+                if (snapshot.exists()) {
+                    Items existingItem = snapshot.getValue(Items.class);
+                    if (existingItem != null) {
+                        // Preserve fields that are not being updated
+                        if (updatedItem.getTurnoverDate() == null) {
+                            updatedItem.setTurnoverDate(existingItem.getTurnoverDate());
+                        }
+                        if (updatedItem.getTurnoverPerson() == null) {
+                            updatedItem.setTurnoverPerson(existingItem.getTurnoverPerson());
+                        }
+                        if (updatedItem.getFoundByName() == null) {
+                            updatedItem.setFoundByName(existingItem.getFoundByName());
+                        }
+                        if (updatedItem.getStaffInvolved() == null) {
+                            updatedItem.setStaffInvolved(existingItem.getStaffInvolved());
+                        }
+
+                        // Set the ID and updated timestamp
+                        updatedItem.setId(id);
+                        updatedItem.setUpdatedAt(Instant.now().toString());
+
+                        // Save the updated item
+                        dbRef.child(id).setValueAsync(updatedItem);
+                        future.complete(updatedItem);
+                    } else {
+                        future.complete(null);
                     }
-                    if (updatedItem.getTurnoverPerson() == null) {
-                        updatedItem.setTurnoverPerson(existingItem.getTurnoverPerson());
-                    }
-
-                    // Set the ID and updated timestamp
-                    updatedItem.setId(id);
-                    updatedItem.setUpdatedAt(Instant.now().toString());
-
-                    // Save the updated item
-                    dbRef.child(id).setValueAsync(updatedItem);
-                    future.complete(updatedItem);
                 } else {
                     future.complete(null);
                 }
-            } else {
-                future.complete(null);
             }
-        }
 
-        @Override
-        public void onCancelled(DatabaseError error) {
-            future.completeExceptionally(error.toException());
-        }
-    });
+            @Override
+            public void onCancelled(DatabaseError error) {
+                future.completeExceptionally(error.toException());
+            }
+        });
 
-    try {
-        return future.get();
-    } catch (Exception e) {
-        e.printStackTrace();
-        return null;
+        try {
+            return future.get();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
     }
-}
-
 
     @Override
     public void deleteItem(String id) {
@@ -265,7 +278,7 @@ public Items updateItem(String id, Items updatedItem) {
             return future.get();
         } catch (Exception e) {
             e.printStackTrace();
-            return new Items(); 
+            return new Items();
         }
     }
 
@@ -292,6 +305,12 @@ public Items updateItem(String id, Items updatedItem) {
                                     break;
                                 case "userRef":
                                     item.setUserRef((String) value);
+                                    break;
+                                case "foundByName": // Added case for `foundByName`
+                                    item.setFoundByName((String) value);
+                                    break;
+                                case "staffInvolved": // Added case for `staffInvolved`
+                                    item.setStaffInvolved((String) value);
                                     break;
                             }
                         });
@@ -321,7 +340,7 @@ public Items updateItem(String id, Items updatedItem) {
         }
     }
 
-    // Corrected placement of updateTurnoverDetails method
+    @Override
     public Items updateTurnoverDetails(String id, String turnoverDate, String turnoverPerson, String department) {
         CompletableFuture<Items> future = new CompletableFuture<>();
         dbRef.child(id).addListenerForSingleValueEvent(new ValueEventListener() {
@@ -334,7 +353,7 @@ public Items updateItem(String id, Items updatedItem) {
                         item.setTurnoverDate(turnoverDate);
                         item.setTurnoverPerson(turnoverPerson);
                         item.setDepartment(department);
-                        
+
                         // Set the updated timestamp
                         item.setUpdatedAt(Instant.now().toString());
 

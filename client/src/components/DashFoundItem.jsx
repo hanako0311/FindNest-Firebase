@@ -10,40 +10,7 @@ import { useNavigate } from "react-router-dom";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import ItemDetailsPage from "../pages/ItemDetailsPage";
-
-const categories = [
-  "Mobile Phones",
-  "Laptops/Tablets",
-  "Headphones/Earbuds",
-  "Chargers and Cables",
-  "Cameras",
-  "Electronic Accessories",
-  "Textbooks",
-  "Notebooks",
-  "Stationery Items",
-  "Art Supplies",
-  "Calculators",
-  "Coats and Jackets",
-  "Hats and Caps",
-  "Scarves and Gloves",
-  "Bags and Backpacks",
-  "Sunglasses",
-  "Jewelry and Watches",
-  "Umbrellas",
-  "Wallets and Purses",
-  "ID Cards and Passports",
-  "Keys",
-  "Personal Care Items",
-  "Sports Gear",
-  "Gym Equipment",
-  "Bicycles and Skateboards",
-  "Musical Instruments",
-  "Water Bottles",
-  "Lunch Boxes",
-  "Toys and Games",
-  "Decorative Items",
-  "Other",
-];
+import { categories } from "../reusable/constant.js";
 
 export default function DashFoundItem() {
   const { currentUser } = useSelector((state) => state.user);
